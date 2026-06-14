@@ -98,8 +98,10 @@
             {{ match.kickoff_time | cot_time }} COT · {{ match.kickoff_time.strftime('%d/%m %H:%M') }} UTC
           </div>
         </div>
-        {% if match.status == 'en_curso' %}
+        {% if match.is_live %}
           <span class="sbadge sb-live">En vivo</span>
+        {% elif match.awaiting_result %}
+          <span class="sbadge sb-pending">⏳ Por confirmar</span>
         {% else %}
           <span class="sbadge sb-pending">Próximo</span>
         {% endif %}

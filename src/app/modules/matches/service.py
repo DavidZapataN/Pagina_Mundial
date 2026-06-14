@@ -13,14 +13,15 @@ Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Literal
 
 from sqlmodel import Session, select
 
 from app.exceptions import InvalidScoreError, MatchNotFoundError
-from app.models import Match, MatchStatus, PredictedWinner
+from app.models import LIVE_WINDOW, Match, MatchStatus, PredictedWinner
 from app.modules.scoring.service import ScoringService, UserScore
+from app.utils import utcnow
 
 logger = logging.getLogger("polla.matches")
 
@@ -103,7 +104,7 @@ class MatchService:
         return match
 
     # Ventana en la que un partido sin resultado se considera "en vivo".
-    LIVE_WINDOW = timedelta(hours=2, minutes=30)
+    LIVE_WINDOW = LIVE_WINDOW
 
     def auto_transition_statuses(self, now: datetime | None = None) -> int:
         """
@@ -115,7 +116,7 @@ class MatchService:
 
         Returns: número de partidos transicionados.
         """
-        now = now or datetime.utcnow()
+        now = now or utcnow()
         candidates = self._session.exec(
             select(Match).where(
                 Match.status == MatchStatus.pendiente,

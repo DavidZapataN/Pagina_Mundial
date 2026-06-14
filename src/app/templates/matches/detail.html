@@ -26,8 +26,10 @@
 
   <!-- Estado -->
   <div style="text-align:center;margin-bottom:0.75rem">
-    {% if match.status == 'en_curso' %}
+    {% if match.is_live %}
       <span class="sbadge sb-live">🔴 En vivo</span>
+    {% elif match.awaiting_result %}
+      <span class="sbadge sb-pending">⏳ Por confirmar</span>
     {% elif match.status == 'finalizado' %}
       <span class="sbadge sb-done">Finalizado</span>
     {% else %}
@@ -56,9 +58,12 @@
           <span class="snum snum-official" style="width:52px;height:52px;font-size:1.6rem">{{ match.official_away_goals }}</span>
         </div>
         <div style="font-size:0.7rem;color:var(--text2);margin-top:0.5rem">Resultado oficial</div>
-      {% elif match.status == 'en_curso' %}
+      {% elif match.is_live %}
         <div style="font-size:1.8rem;font-weight:300;color:var(--text2)">vs</div>
         <div style="font-size:0.7rem;color:var(--red);margin-top:0.3rem">En curso</div>
+      {% elif match.awaiting_result %}
+        <div style="font-size:1.8rem;font-weight:300;color:var(--text2)">vs</div>
+        <div style="font-size:0.7rem;color:var(--text2);margin-top:0.3rem">Por confirmar</div>
       {% else %}
         <div style="font-size:1.8rem;font-weight:300;color:var(--text2)">vs</div>
         <div style="font-size:0.72rem;color:var(--text2);margin-top:0.3rem">

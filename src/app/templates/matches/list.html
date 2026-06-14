@@ -158,8 +158,10 @@
 
         <!-- Footer -->
         <div class="match-footer">
-          {% if match.status == 'en_curso' %}
+          {% if match.is_live %}
             <span class="sbadge sb-live">🔴 En vivo</span>
+          {% elif match.awaiting_result %}
+            <span class="sbadge sb-pending">⏳ Por confirmar</span>
           {% elif match.status == 'finalizado' %}
             <span class="sbadge sb-done">Finalizado</span>
           {% endif %}
