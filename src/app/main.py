@@ -63,14 +63,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from app.database import engine
     with engine.connect() as conn:
         for ddl in [
-            "ALTER TABLE poolgroup ADD COLUMN start_phase VARCHAR DEFAULT NULL",
-            'ALTER TABLE "match" ADD COLUMN official_winner VARCHAR DEFAULT NULL',
+            "ALTER TABLE poolgroup ADD COLUMN IF NOT EXISTS start_phase VARCHAR DEFAULT NULL",
+            'ALTER TABLE "match" ADD COLUMN IF NOT EXISTS official_winner VARCHAR DEFAULT NULL',
         ]:
-            try:
-                conn.execute(text(ddl))
-                conn.commit()
-            except Exception:
-                pass  # column already exists
+            conn.execute(text(ddl))
+        conn.commit()
     from app.seed import seed_if_empty
     seed_if_empty()
     logger.info("Application startup complete.")
