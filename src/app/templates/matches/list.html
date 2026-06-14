@@ -7,6 +7,36 @@
   <span class="page-count">{{ total_count }} partidos</span>
 </div>
 
+{% if next_match %}
+<div class="hero">
+  <div class="hero-label">⚽ Próximo partido</div>
+  <div class="hero-teams">
+    <span class="hero-team">
+      <img src="{{ flag_url(next_match.home_team) }}" alt="" onerror="this.style.display='none'">
+      {{ next_match.home_team | team_code }}
+    </span>
+    <span class="hero-vs">vs</span>
+    <span class="hero-team">
+      {{ next_match.away_team | team_code }}
+      <img src="{{ flag_url(next_match.away_team) }}" alt="" onerror="this.style.display='none'">
+    </span>
+  </div>
+  <div class="hero-count" id="hero-count" data-kickoff="{{ next_match.kickoff_time.isoformat() }}Z">
+    <span class="hero-pill"><span class="cd-d">–</span><small>días</small></span>
+    <span class="hero-pill"><span class="cd-h">–</span><small>hrs</small></span>
+    <span class="hero-pill"><span class="cd-m">–</span><small>min</small></span>
+    <span class="hero-pill"><span class="cd-s">–</span><small>seg</small></span>
+  </div>
+  {% if current_user and pending_count > 0 %}
+    <a href="/matches?filter=upcoming&unpredicted=true" class="hero-cta">
+      🎯 Te faltan {{ pending_count }} por predecir →
+    </a>
+  {% elif current_user %}
+    <div class="hero-cta" style="color:var(--accent)">✓ Estás al día con tus predicciones</div>
+  {% endif %}
+</div>
+{% endif %}
+
 <!-- Filtros -->
 <div class="filter-row">
   <a href="/matches?filter=upcoming{% if unpredicted %}&unpredicted=true{% endif %}"
@@ -169,6 +199,27 @@
 
 {% block extra_js %}
 <script>
+// Contador regresivo del próximo partido
+(function () {
+  const el = document.getElementById('hero-count');
+  if (!el) return;
+  const target = new Date(el.dataset.kickoff).getTime();
+  const set = (cls, v) => { const n = el.querySelector(cls); if (n) n.textContent = v; };
+  function tick() {
+    let diff = Math.floor((target - Date.now()) / 1000);
+    if (diff <= 0) { set('.cd-d', 0); set('.cd-h', 0); set('.cd-m', 0); set('.cd-s', 0); return; }
+    const d = Math.floor(diff / 86400); diff %= 86400;
+    const h = Math.floor(diff / 3600); diff %= 3600;
+    const m = Math.floor(diff / 60); const s = diff % 60;
+    set('.cd-d', d);
+    set('.cd-h', String(h).padStart(2, '0'));
+    set('.cd-m', String(m).padStart(2, '0'));
+    set('.cd-s', String(s).padStart(2, '0'));
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-pred]').forEach(container => {
     const matchId = container.dataset.pred;

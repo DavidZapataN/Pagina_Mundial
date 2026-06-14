@@ -1,0 +1,21 @@
+{
+  "name": "Polla del Mundial 2026",
+  "short_name": "Polla Mundial",
+  "description": "Predice los partidos del Mundial 2026 y compite con tu familia y amigos.",
+  "start_url": "/matches",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1b2e",
+  "theme_color": "#0d1b2e",
+  "lang": "es",
+  "categories": ["sports", "games"],
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

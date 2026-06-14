@@ -22,6 +22,8 @@ from sqlmodel import Session
 from app.database import get_session
 from app.error_messages import ERROR_MESSAGES
 from app.exceptions import InvalidCredentialsError, UsernameAlreadyExistsError
+from app.models import User
+from app.modules.auth.dependencies import require_current_user
 from app.modules.auth.service import AuthService
 
 logger = logging.getLogger("polla.auth.router")
@@ -168,6 +170,50 @@ async def login(
 # ---------------------------------------------------------------------------
 # POST /logout
 # ---------------------------------------------------------------------------
+
+
+@router.get("/profile", response_class=HTMLResponse)
+async def profile_page(
+    request: Request,
+    current_user: User = Depends(require_current_user),
+) -> Response:
+    """Página de perfil del usuario autenticado."""
+    from app.templates import render
+    return HTMLResponse(render("auth/profile.html", request=request, current_user=current_user))
+
+
+@router.post("/profile", response_class=HTMLResponse)
+async def change_password(
+    request: Request,
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+    current_user: User = Depends(require_current_user),
+    session: Session = Depends(get_session),
+) -> Response:
+    """Cambia la contraseña del usuario y cierra la sesión."""
+    from app.templates import render
+
+    if new_password != confirm_password:
+        return HTMLResponse(
+            render("auth/profile.html", request=request, current_user=current_user,
+                   error="Las contraseñas nuevas no coinciden"),
+            status_code=400,
+        )
+
+    svc = AuthService(session)
+    try:
+        svc.change_password(current_user.id, current_password, new_password)
+    except InvalidCredentialsError as exc:
+        return HTMLResponse(
+            render("auth/profile.html", request=request, current_user=current_user, error=str(exc)),
+            status_code=400,
+        )
+
+    # Sesiones invalidadas: redirigir al login para reautenticarse.
+    response = RedirectResponse(url="/auth/login?changed=1", status_code=303)
+    response.delete_cookie(key="session_token")
+    return response
 
 
 @router.post("/logout")

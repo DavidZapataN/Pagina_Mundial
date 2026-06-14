@@ -63,19 +63,24 @@ class ScoringService:
         pred_away: int,
         official_home: int,
         official_away: int,
+        official_winner: str | None = None,
     ) -> int:
         """
         Retorna 5, 3 o 0 según las reglas de puntuación.
 
         Es una función pura — no accede a la base de datos.
 
+        ``official_winner`` permite indicar quién avanzó realmente cuando un
+        partido de eliminatoria terminó empatado y se definió por penales.
+        Si es ``None`` se deriva del marcador (caso fase de grupos).
+
         Requirements: 4.2, 4.3, 4.4
         """
         if pred_home == official_home and pred_away == official_away:
             return 5
 
-        official_winner = _official_winner(official_home, official_away)
-        if predicted_winner == official_winner:
+        winner = official_winner or _official_winner(official_home, official_away)
+        if predicted_winner == winner:
             return 3
 
         return 0
@@ -89,6 +94,7 @@ class ScoringService:
         match_id: int,
         official_home: int,
         official_away: int,
+        official_winner: str | None = None,
     ) -> list[UserScore]:
         """
         Calcula y persiste los puntos de todos los usuarios que predijeron
@@ -116,6 +122,7 @@ class ScoringService:
                     pred_away=pred.pred_away_goals,
                     official_home=official_home,
                     official_away=official_away,
+                    official_winner=official_winner,
                 )
             except Exception as exc:
                 logger.error(

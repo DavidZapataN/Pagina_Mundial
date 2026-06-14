@@ -18,7 +18,7 @@ from typing import Literal
 from sqlmodel import Session, select
 
 from app.exceptions import InvalidScoreError, MatchNotFoundError
-from app.models import Match, MatchStatus
+from app.models import Match, MatchStatus, PredictedWinner
 from app.modules.scoring.service import ScoringService, UserScore
 
 logger = logging.getLogger("polla.matches")
@@ -106,6 +106,7 @@ class MatchService:
         match_id: int,
         home_goals: int,
         away_goals: int,
+        official_winner: PredictedWinner | None = None,
     ) -> tuple[Match, list[UserScore]]:
         """
         Registra el resultado oficial de un partido dentro de una única
@@ -113,6 +114,9 @@ class MatchService:
           1. Valida que home_goals >= 0 y away_goals >= 0.
           2. Actualiza el partido (status, official_home_goals, official_away_goals).
           3. Calcula y persiste los puntos de todos los predictores.
+
+        ``official_winner`` indica quién avanzó cuando el partido se definió
+        por penales (eliminatorias). Si es ``None`` se deriva del marcador.
 
         Raises:
             InvalidScoreError:   si alguno de los goles es negativo.
@@ -129,12 +133,16 @@ class MatchService:
 
         match.official_home_goals = home_goals
         match.official_away_goals = away_goals
+        match.official_winner = official_winner
         match.status = MatchStatus.finalizado
 
         self._session.add(match)
 
         scoring_svc = ScoringService(self._session)
-        scores = scoring_svc.calculate_and_persist_scores(match_id, home_goals, away_goals)
+        scores = scoring_svc.calculate_and_persist_scores(
+            match_id, home_goals, away_goals,
+            official_winner=official_winner.value if official_winner else None,
+        )
 
         self._session.commit()
         self._session.refresh(match)

@@ -16,36 +16,7 @@
     <a href="/auth/register" class="btn btn-primary">Registrarse</a>
   </div>
 {% else %}
-  <div class="lb-list">
-    {% for entry in entries %}
-    <div class="lb-row {% if current_user and entry.user_id == current_user.id %}me{% endif %}">
-      <!-- Posición -->
-      <div class="lb-pos">
-        {% if entry.position == 1 %}🥇
-        {% elif entry.position == 2 %}🥈
-        {% elif entry.position == 3 %}🥉
-        {% else %}<span style="color:var(--text2)">{{ entry.position }}</span>{% endif %}
-      </div>
-
-      <!-- Nombre -->
-      <div class="lb-name">
-        {{ entry.username }}
-        {% if current_user and entry.user_id == current_user.id %}
-          <span style="font-size:0.7rem;color:var(--accent);margin-left:0.3rem">(tú)</span>
-        {% endif %}
-        <div class="lb-sub">
-          ⭐ {{ entry.exact_score_count }} exactos · ✓ {{ entry.winner_count }} ganadores
-        </div>
-      </div>
-
-      <!-- Puntos -->
-      <div style="text-align:right">
-        <div class="lb-pts">{{ entry.total_points }}</div>
-        <div class="lb-pts-label">pts</div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
+  {% include "partials/podium.html" %}
 
   <!-- Leyenda -->
   <div style="padding:1.25rem 1rem;display:flex;gap:1.25rem;flex-wrap:wrap">

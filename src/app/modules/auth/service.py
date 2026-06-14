@@ -134,6 +134,35 @@ class AuthService:
         logger.info("User logged in: %s", username)
         return token
 
+    def change_password(
+        self, user_id: int, current_password: str, new_password: str
+    ) -> None:
+        """
+        Cambia la contraseña de un usuario tras verificar la actual.
+
+        Invalida todas las sesiones existentes para forzar un nuevo login.
+
+        Raises:
+            InvalidCredentialsError: si la contraseña actual no coincide o la
+                nueva no cumple la longitud mínima.
+        """
+        user = self._session.get(User, user_id)
+        if user is None or not bcrypt.checkpw(
+            current_password.encode("utf-8"), user.password_hash.encode("utf-8")
+        ):
+            raise InvalidCredentialsError("La contraseña actual es incorrecta")
+
+        if len(new_password) < 4:
+            raise InvalidCredentialsError("La nueva contraseña es demasiado corta")
+
+        user.password_hash = bcrypt.hashpw(
+            new_password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
+        self._session.add(user)
+        self._invalidate_existing_sessions(user_id)
+        self._session.commit()
+        logger.info("Password changed for user_id=%d", user_id)
+
     def logout(self, session_token: str) -> None:
         """
         Delete the session identified by *session_token*.

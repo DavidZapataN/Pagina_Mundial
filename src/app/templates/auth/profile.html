@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Mi perfil — Polla del Mundial{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Mi perfil</h1>
+</div>
+
+<div class="card" style="text-align:center">
+  <div class="profile-avatar">{{ current_user.username[0] | upper }}</div>
+  <div style="font-size:1.15rem;font-weight:800;margin-top:0.6rem">{{ current_user.username }}</div>
+  <div style="font-size:0.78rem;color:var(--text2);margin-top:0.2rem">
+    {% if current_user.is_admin %}⚙️ Administrador{% else %}⚽ Jugador{% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">🔒 Cambiar contraseña</div>
+
+  {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+  {% endif %}
+
+  <form action="/auth/profile" method="post">
+    <div class="form-field">
+      <label class="form-label" for="current_password">Contraseña actual</label>
+      <input type="password" id="current_password" name="current_password" required>
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="new_password">Nueva contraseña</label>
+      <input type="password" id="new_password" name="new_password" required minlength="4">
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="confirm_password">Confirmar nueva contraseña</label>
+      <input type="password" id="confirm_password" name="confirm_password" required minlength="4">
+    </div>
+    <button type="submit" class="btn btn-primary btn-full">Guardar cambios</button>
+  </form>
+</div>
+
+<div style="text-align:center;margin:1rem 0 2rem">
+  <form action="/auth/logout" method="post">
+    <button type="submit" class="btn btn-outline">Cerrar sesión</button>
+  </form>
+</div>
+{% endblock %}

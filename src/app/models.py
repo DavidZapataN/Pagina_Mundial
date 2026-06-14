@@ -108,6 +108,10 @@ class Match(SQLModel, table=True):
     status: MatchStatus = Field(default=MatchStatus.pendiente)
     official_home_goals: int | None = Field(default=None, ge=0)
     official_away_goals: int | None = Field(default=None, ge=0)
+    # Ganador real del partido. En fase de grupos coincide con el marcador,
+    # pero en eliminatorias un empate se define por penales: aquí guardamos
+    # quién avanzó para puntuar correctamente el acierto de ganador.
+    official_winner: PredictedWinner | None = Field(default=None)
 
 
 class Prediction(SQLModel, table=True):

@@ -63,6 +63,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     with engine.connect() as conn:
         for ddl in [
             "ALTER TABLE poolgroup ADD COLUMN start_phase VARCHAR DEFAULT NULL",
+            "ALTER TABLE match ADD COLUMN official_winner VARCHAR DEFAULT NULL",
         ]:
             try:
                 conn.execute(text(ddl))

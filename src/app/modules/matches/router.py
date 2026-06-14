@@ -129,6 +129,16 @@ async def list_matches(
             if m.id not in user_predictions and m.status == MatchStatus.pendiente
         ]
 
+    # Hero: próximo partido aún abierto + cuántos faltan por predecir
+    upcoming_open = sorted(
+        [m for m in all_matches if m.status == MatchStatus.pendiente and m.kickoff_time > now],
+        key=lambda m: m.kickoff_time,
+    )
+    next_match = upcoming_open[0] if upcoming_open else None
+    pending_count = 0
+    if current_user:
+        pending_count = sum(1 for m in upcoming_open if m.id not in user_predictions)
+
     # Agrupar por fecha COT
     grouped: dict[object, list] = defaultdict(list)
     for m in matches:
@@ -148,6 +158,8 @@ async def list_matches(
         user_predictions=user_predictions,
         active_filter=filter,
         unpredicted=unpredicted,
+        next_match=next_match,
+        pending_count=pending_count,
     ))
 
 

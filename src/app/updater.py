@@ -14,8 +14,16 @@ from datetime import datetime, timedelta
 from sqlmodel import Session, select
 
 from app.database import engine
-from app.models import Match, MatchStatus
+from app.models import Match, MatchStatus, PredictedWinner
 from app.modules.matches.service import MatchService
+
+# Mapeo del campo "winner" de football-data.org → ganador real del partido.
+# En eliminatorias define correctamente al que avanzó por penales.
+_WINNER_MAP: dict[str, PredictedWinner] = {
+    "HOME_TEAM": PredictedWinner.home,
+    "AWAY_TEAM": PredictedWinner.away,
+    "DRAW": PredictedWinner.draw,
+}
 
 logger = logging.getLogger("polla.updater")
 
@@ -75,9 +83,11 @@ def update_results() -> dict:
         for api_m in api_matches:
             home_en = api_m.get("homeTeam", {}).get("name", "")
             away_en = api_m.get("awayTeam", {}).get("name", "")
-            ft = api_m.get("score", {}).get("fullTime", {})
+            score = api_m.get("score", {})
+            ft = score.get("fullTime", {})
             home_goals = ft.get("home")
             away_goals = ft.get("away")
+            official_winner = _WINNER_MAP.get(score.get("winner") or "")
             utc_str = api_m.get("utcDate", "")
 
             if not (home_en and away_en and home_goals is not None and away_goals is not None):
@@ -106,7 +116,7 @@ def update_results() -> dict:
                 continue
 
             try:
-                svc.register_result(local.id, int(home_goals), int(away_goals))
+                svc.register_result(local.id, int(home_goals), int(away_goals), official_winner)
                 logger.info("Resultado: %s %d-%d %s", home_es, home_goals, away_goals, away_es)
                 updated += 1
             except Exception as exc:
