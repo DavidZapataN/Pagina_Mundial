@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sin conexión — Polla del Mundial</title>
+  <style>
+    html, body {
+      margin: 0; height: 100%;
+      background: #0d1b2e; color: #e6edf3;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+    }
+    .box { padding: 2rem; max-width: 320px; }
+    .ball { font-size: 3rem; }
+    h1 { font-size: 1.25rem; margin: 0.75rem 0 0.5rem; }
+    p { font-size: 0.9rem; color: #9fb0c3; line-height: 1.5; margin: 0 0 1.25rem; }
+    button {
+      background: #00D9B5; color: #0d1b2e; border: none;
+      font-weight: 800; font-size: 0.9rem;
+      padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="ball">⚽</div>
+    <h1>Sin conexión</h1>
+    <p>No pudimos cargar la Polla del Mundial. Revisa tu conexión a internet e inténtalo de nuevo.</p>
+    <button onclick="location.reload()">Reintentar</button>
+  </div>
+</body>
+</html>

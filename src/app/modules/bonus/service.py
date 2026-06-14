@@ -88,12 +88,16 @@ class BonusService:
     # ------------------------------------------------------------------
 
     def get_official(self) -> TournamentBonus:
+        """
+        Resultado oficial (singleton id=1).
+
+        Si aún no existe devuelve un objeto transitorio sin persistir: la fila
+        solo se crea cuando el admin guarda un resultado vía ``set_official``.
+        Así un simple GET de la página de bonus no escribe en la BD.
+        """
         official = self._session.get(TournamentBonus, 1)
         if official is None:
             official = TournamentBonus(id=1)
-            self._session.add(official)
-            self._session.commit()
-            self._session.refresh(official)
         return official
 
     def set_official(self, champion: str | None, top_scorer: str | None) -> int:

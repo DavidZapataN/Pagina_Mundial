@@ -1,8 +1,13 @@
 /* Service worker de Polla del Mundial.
-   Estrategia: network-first para navegación (datos siempre frescos),
-   con respaldo a caché solo cuando no hay conexión. */
-const CACHE = "polla-v1";
-const ASSETS = ["/static/icon.svg", "/static/manifest.webmanifest"];
+   Estrategia:
+   - Estáticos (/static/...): cache con respaldo a red (rápido y offline).
+   - Navegación / HTML / datos: SIEMPRE a la red, sin cachear. Nunca guardamos
+     páginas autenticadas (evita que en un dispositivo compartido se vea el
+     contenido de otra sesión tras cerrar sesión / sin conexión). Si no hay
+     red, mostramos una página offline mínima. */
+const CACHE = "polla-v2";
+const OFFLINE_URL = "/static/offline.html";
+const ASSETS = ["/static/icon.svg", "/static/manifest.webmanifest", OFFLINE_URL];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -23,16 +28,34 @@ self.addEventListener("fetch", (event) => {
   // Solo GET; nunca interceptar POST de predicciones/login.
   if (req.method !== "GET") return;
 
-  event.respondWith(
-    fetch(req)
-      .then((res) => {
-        // Cachea solo respuestas propias y exitosas para respaldo offline.
-        if (res.ok && new URL(req.url).origin === self.location.origin) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-        }
-        return res;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;  // no tocamos terceros (banderas, etc.)
+
+  // Estáticos propios: cache-first, refrescando en segundo plano.
+  if (url.pathname.startsWith("/static/")) {
+    event.respondWith(
+      caches.match(req).then((hit) => {
+        const network = fetch(req)
+          .then((res) => {
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(CACHE).then((c) => c.put(req, copy));
+            }
+            return res;
+          })
+          .catch(() => hit);
+        return hit || network;
       })
-      .catch(() => caches.match(req).then((hit) => hit || caches.match("/matches")))
+    );
+    return;
+  }
+
+  // Navegación / HTML / JSON autenticado: solo red. Sin cachear.
+  // Si falla la red y es una navegación, mostramos la página offline.
+  event.respondWith(
+    fetch(req).catch(() => {
+      if (req.mode === "navigate") return caches.match(OFFLINE_URL);
+      return Response.error();
+    })
   );
 });
