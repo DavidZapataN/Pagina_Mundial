@@ -96,6 +96,7 @@ async def list_matches(
     from sqlmodel import select as sql_select
 
     svc = MatchService(session)
+    svc.auto_transition_statuses()  # refleja "en vivo" sin esperar al loop
     all_matches = svc.list_matches(group_by="date")
 
     now = datetime.utcnow()

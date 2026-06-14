@@ -84,6 +84,60 @@ async def my_predictions(
 
 
 # ---------------------------------------------------------------------------
+# GET /predictions/reminders  (JSON)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/reminders", response_class=JSONResponse)
+async def reminders(
+    current_user: User = Depends(require_current_user),
+    session: Session = Depends(get_session),
+    hours: int = 24,
+) -> JSONResponse:
+    """
+    Partidos próximos (dentro de N horas) que el usuario aún no predijo y
+    siguen abiertos. Consumido por el JS de recordatorios.
+    """
+    from datetime import datetime, timedelta
+
+    from sqlmodel import select as sql_select
+
+    from app.models import Match, MatchStatus, Prediction
+    from app.utils import is_prediction_open
+
+    now = datetime.utcnow()
+    horizon = now + timedelta(hours=max(1, min(hours, 72)))
+
+    predicted_ids = {
+        p.match_id for p in session.exec(
+            sql_select(Prediction).where(Prediction.user_id == current_user.id)
+        ).all()
+    }
+
+    upcoming = session.exec(
+        sql_select(Match).where(
+            Match.status == MatchStatus.pendiente,
+            Match.kickoff_time > now,
+            Match.kickoff_time <= horizon,
+        ).order_by(Match.kickoff_time)
+    ).all()
+
+    items = []
+    for m in upcoming:
+        if m.id in predicted_ids or not is_prediction_open(m.kickoff_time):
+            continue
+        items.append({
+            "id": m.id,
+            "home": m.home_team,
+            "away": m.away_team,
+            "kickoff": m.kickoff_time.isoformat() + "Z",
+            "minutes_left": int((m.kickoff_time - now).total_seconds() // 60),
+        })
+
+    return JSONResponse({"count": len(items), "matches": items})
+
+
+# ---------------------------------------------------------------------------
 # POST /predictions/{match_id}
 # ---------------------------------------------------------------------------
 

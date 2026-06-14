@@ -38,9 +38,55 @@
   </form>
 </div>
 
+<div class="card">
+  <div class="card-title">🔔 Recordatorios</div>
+  <p style="font-size:0.83rem;color:var(--text2);line-height:1.5;margin-bottom:0.9rem">
+    Activa los avisos en este dispositivo para que te recordemos los partidos
+    que aún no has predicho cuando faltan pocas horas.
+  </p>
+  <button type="button" id="btn-notif" class="btn btn-outline">Activar recordatorios</button>
+  <div id="notif-status" style="font-size:0.78rem;margin-top:0.6rem;color:var(--text2)"></div>
+  <p style="font-size:0.7rem;color:var(--text2);margin-top:0.7rem;line-height:1.4">
+    Nota: los avisos llegan mientras la app esté abierta o en segundo plano en tu teléfono.
+  </p>
+</div>
+
 <div style="text-align:center;margin:1rem 0 2rem">
   <form action="/auth/logout" method="post">
     <button type="submit" class="btn btn-outline">Cerrar sesión</button>
   </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const btn = document.getElementById('btn-notif');
+  const status = document.getElementById('notif-status');
+  if (!('Notification' in window)) {
+    btn.disabled = true;
+    status.textContent = 'Tu navegador no soporta notificaciones.';
+    return;
+  }
+  function refresh() {
+    if (Notification.permission === 'granted') {
+      status.textContent = '✓ Recordatorios activados.';
+      status.style.color = 'var(--accent)';
+      btn.textContent = 'Recordatorios activados';
+      btn.disabled = true;
+      localStorage.setItem('remindersOn', '1');
+    } else if (Notification.permission === 'denied') {
+      status.textContent = 'Bloqueados. Actívalos desde los ajustes del navegador.';
+      status.style.color = 'var(--red)';
+    }
+  }
+  btn.addEventListener('click', () => {
+    Notification.requestPermission().then(p => {
+      refresh();
+      if (p === 'granted') new Notification('⚽ Polla del Mundial', { body: '¡Recordatorios activados!' });
+    });
+  });
+  refresh();
+})();
+</script>
 {% endblock %}

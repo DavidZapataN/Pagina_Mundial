@@ -802,6 +802,7 @@
       <a href="/bracket" {% if request.url.path.startswith('/bracket') %}class="nav-active"{% endif %}>Llaves</a>
       {% if current_user %}
         <a href="/predictions/me" {% if request.url.path.startswith('/predictions') %}class="nav-active"{% endif %}>Mis picks</a>
+        <a href="/bonus" {% if request.url.path.startswith('/bonus') %}class="nav-active"{% endif %}>Bonus</a>
         <a href="/groups/mis-tablas" {% if request.url.path.startswith('/groups') or request.url.path.startswith('/leaderboard') %}class="nav-active"{% endif %}>Tablas</a>
         {% if current_user.is_admin %}
           <a href="/admin" {% if request.url.path.startswith('/admin') %}class="nav-active"{% endif %}>Admin</a>
@@ -835,6 +836,10 @@
     <a href="/predictions/me" class="bn-item {% if request.url.path.startswith('/predictions') %}active{% endif %}">
       <span class="bn-icon">📋</span>
       <span>Mis picks</span>
+    </a>
+    <a href="/bonus" class="bn-item {% if request.url.path.startswith('/bonus') %}active{% endif %}">
+      <span class="bn-icon">🎯</span>
+      <span>Bonus</span>
     </a>
     <a href="/groups/mis-tablas" class="bn-item {% if request.url.path.startswith('/groups') or request.url.path.startswith('/leaderboard') %}active{% endif %}">
       <span class="bn-icon">🏆</span>
@@ -891,6 +896,40 @@
       });
     }
   </script>
+  {% if current_user %}
+  <script>
+    // Recordatorios: avisa de partidos sin predecir mientras la app está abierta.
+    (function () {
+      if (!('Notification' in window)) return;
+      const THROTTLE_MS = 6 * 60 * 60 * 1000;  // 1 aviso por partido cada 6 h
+      function notified(id) {
+        const t = +(localStorage.getItem('rem_' + id) || 0);
+        return Date.now() - t < THROTTLE_MS;
+      }
+      function check() {
+        if (Notification.permission !== 'granted') return;
+        fetch('/predictions/reminders', { headers: { 'X-Requested-With': 'fetch' } })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (!data || !data.matches) return;
+            data.matches.forEach(m => {
+              if (notified(m.id)) return;
+              const h = Math.floor(m.minutes_left / 60);
+              const when = h >= 1 ? ('en ' + h + ' h') : ('en ' + m.minutes_left + ' min');
+              new Notification('🎯 ¡Te falta una predicción!', {
+                body: m.home + ' vs ' + m.away + ' empieza ' + when,
+                tag: 'rem_' + m.id,
+              });
+              localStorage.setItem('rem_' + m.id, Date.now());
+            });
+          })
+          .catch(() => {});
+      }
+      setTimeout(check, 4000);
+      setInterval(check, 15 * 60 * 1000);  // cada 15 min
+    })();
+  </script>
+  {% endif %}
   {% block extra_js %}{% endblock %}
 </body>
 </html>

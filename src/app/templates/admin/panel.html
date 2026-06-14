@@ -19,6 +19,33 @@
   <span id="update-status" style="font-size:0.8rem;margin-left:0.75rem;color:var(--text2)"></span>
 </div>
 
+<!-- Resultado oficial de bonus -->
+<div class="card" style="margin-bottom:0.75rem">
+  <div class="card-title">🎯 Resultado de bonus</div>
+  <p style="font-size:0.82rem;color:var(--text2);margin-bottom:1rem">
+    Define campeón y goleador oficiales. Al guardar se re-puntúan todos los bonus.
+  </p>
+  <form action="/bonus/official" method="post">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.9rem">
+      <div class="form-field" style="margin:0">
+        <label class="form-label">🏆 Campeón</label>
+        <select name="champion">
+          <option value="">— Sin definir —</option>
+          {% for t in bonus_teams %}
+            <option value="{{ t }}" {% if bonus_official.champion == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field" style="margin:0">
+        <label class="form-label">⚽ Goleador</label>
+        <input type="text" name="top_scorer" placeholder="Nombre del jugador"
+               value="{{ bonus_official.top_scorer or '' }}">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary" style="margin-top:1rem">Guardar resultado de bonus</button>
+  </form>
+</div>
+
 <!-- Crear partido -->
 <div class="card">
   <div class="card-title">Crear partido</div>

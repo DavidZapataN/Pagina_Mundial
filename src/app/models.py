@@ -158,3 +158,31 @@ class UserPoolGroup(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", index=True)
     group_id: int = Field(foreign_key="poolgroup.id", index=True)
     joined_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class BonusPrediction(SQLModel, table=True):
+    """
+    Predicción "bonus" de cada usuario para todo el torneo: campeón y goleador.
+
+    Se bloquea cuando arranca el Mundial (primer partido). ``points`` queda en
+    NULL hasta que el admin registra los resultados oficiales.
+    """
+
+    __table_args__ = (UniqueConstraint("user_id"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True, unique=True)
+    champion: str | None = Field(default=None, max_length=60)
+    top_scorer: str | None = Field(default=None, max_length=80)
+    points: int | None = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class TournamentBonus(SQLModel, table=True):
+    """Resultado oficial de los bonus (singleton: siempre id=1)."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    champion: str | None = Field(default=None, max_length=60)
+    top_scorer: str | None = Field(default=None, max_length=80)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)

@@ -13,6 +13,7 @@ Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta
 from typing import Literal
 
 from sqlmodel import Session, select
@@ -100,6 +101,37 @@ class MatchService:
             "Partido %d: estado actualizado a '%s'.", match_id, new_status.value
         )
         return match
+
+    # Ventana en la que un partido sin resultado se considera "en vivo".
+    LIVE_WINDOW = timedelta(hours=2, minutes=30)
+
+    def auto_transition_statuses(self, now: datetime | None = None) -> int:
+        """
+        Transición automática pendiente → en_curso para partidos cuyo
+        kickoff ya pasó y siguen dentro de la ventana de juego.
+
+        Idempotente y barato: solo escribe cuando hay cambios. Llamado desde
+        la tarea de fondo y de forma perezosa al listar partidos.
+
+        Returns: número de partidos transicionados.
+        """
+        now = now or datetime.utcnow()
+        candidates = self._session.exec(
+            select(Match).where(
+                Match.status == MatchStatus.pendiente,
+                Match.kickoff_time <= now,
+                Match.kickoff_time >= now - self.LIVE_WINDOW,
+            )
+        ).all()
+        changed = 0
+        for m in candidates:
+            m.status = MatchStatus.en_curso
+            self._session.add(m)
+            changed += 1
+        if changed:
+            self._session.commit()
+            logger.info("Auto-transición: %d partido(s) a 'en_curso'.", changed)
+        return changed
 
     def register_result(
         self,

@@ -34,6 +34,7 @@ from app.exceptions import (
 )
 from app.modules.auth.dependencies import get_current_user_or_none
 from app.modules.auth.router import router as auth_router
+from app.modules.bonus.router import router as bonus_router
 from app.modules.groups.router import router as groups_router
 from app.modules.leaderboard.router import router as leaderboard_router
 from app.modules.matches.router import router as matches_router
@@ -78,6 +79,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         while True:
             await asyncio.sleep(300)  # cada 5 minutos
             try:
+                from app.database import engine as _engine
+                from app.modules.matches.service import MatchService
+                with Session(_engine) as _s:
+                    MatchService(_s).auto_transition_statuses()
+            except Exception as exc:
+                logger.error("Auto-transición falló: %s", exc)
+            try:
                 from app.updater import update_results
                 result = update_results()
                 if result["updated"]:
@@ -119,6 +127,7 @@ app.include_router(matches_router, prefix="/matches", tags=["matches"])
 app.include_router(predictions_router, prefix="/predictions", tags=["predictions"])
 app.include_router(leaderboard_router, prefix="/leaderboard", tags=["leaderboard"])
 app.include_router(groups_router, prefix="/groups", tags=["groups"])
+app.include_router(bonus_router, prefix="/bonus", tags=["bonus"])
 
 # ---------------------------------------------------------------------------
 # Global exception handlers
@@ -300,4 +309,13 @@ async def admin_panel(
         return RedirectResponse(url="/matches", status_code=303)
     svc = MatchService(session)
     matches = svc.list_matches(group_by="date")
-    return HTMLResponse(render("admin/panel.html", request=request, current_user=current_user, matches=matches))
+    from app.modules.bonus.service import BonusService
+    bonus_svc = BonusService(session)
+    return HTMLResponse(render(
+        "admin/panel.html",
+        request=request,
+        current_user=current_user,
+        matches=matches,
+        bonus_teams=bonus_svc.list_teams(),
+        bonus_official=bonus_svc.get_official(),
+    ))
