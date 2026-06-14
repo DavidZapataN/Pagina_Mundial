@@ -58,10 +58,12 @@
     <div class="form-field">
       <label class="form-label" for="create-phase">Contar puntos desde</label>
       <select id="create-phase" name="start_phase">
-        <option value="">Toda la polla (fase de grupos en adelante)</option>
-        {% for p in phases %}
-          <option value="{{ p.value }}">{{ p.value | title }}</option>
-        {% endfor %}
+        <option value="">Toda la polla (todos los partidos)</option>
+        <option value="dieciseisavos">A partir de dieciseisavos (32)</option>
+        <option value="octavos">A partir de octavos (16)</option>
+        <option value="cuartos">A partir de cuartos de final</option>
+        <option value="semifinal">A partir de semifinales</option>
+        <option value="final">Solo la final</option>
       </select>
     </div>
     <button type="submit" class="btn btn-primary btn-full">Crear grupo</button>

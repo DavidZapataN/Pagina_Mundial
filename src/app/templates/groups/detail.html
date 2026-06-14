@@ -42,12 +42,12 @@
   <form action="/groups/{{ group.id }}/phase" method="post" style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap">
     <div style="flex:1;min-width:160px">
       <select name="start_phase" style="margin-bottom:0">
-        <option value="" {% if not group.start_phase %}selected{% endif %}>Desde fase de grupos</option>
-        {% for p in phases %}
-          <option value="{{ p.value }}" {% if group.start_phase and group.start_phase.value == p.value %}selected{% endif %}>
-            Desde {{ p.value | title }}
-          </option>
-        {% endfor %}
+        <option value="" {% if not group.start_phase %}selected{% endif %}>Toda la polla (todos los partidos)</option>
+        <option value="dieciseisavos" {% if group.start_phase and group.start_phase.value == 'dieciseisavos' %}selected{% endif %}>A partir de dieciseisavos (32)</option>
+        <option value="octavos" {% if group.start_phase and group.start_phase.value == 'octavos' %}selected{% endif %}>A partir de octavos (16)</option>
+        <option value="cuartos" {% if group.start_phase and group.start_phase.value == 'cuartos' %}selected{% endif %}>A partir de cuartos de final</option>
+        <option value="semifinal" {% if group.start_phase and group.start_phase.value == 'semifinal' %}selected{% endif %}>A partir de semifinales</option>
+        <option value="final" {% if group.start_phase and group.start_phase.value == 'final' %}selected{% endif %}>Solo la final</option>
       </select>
     </div>
     <button type="submit" class="btn btn-outline btn-sm">Actualizar</button>
