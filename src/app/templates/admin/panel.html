@@ -6,6 +6,19 @@
   <h1 class="page-title">Admin</h1>
 </div>
 
+<!-- Actualizar resultados -->
+<div class="card" style="margin-bottom:0.75rem">
+  <div class="card-title">Resultados automáticos</div>
+  <p style="font-size:0.82rem;color:var(--text2);margin-bottom:1rem">
+    Consulta football-data.org y registra los resultados finalizados.
+    Se actualiza solo cada 5 min; usa este botón para forzarlo ahora.
+  </p>
+  <button id="btn-update" class="btn btn-primary btn-sm" onclick="triggerUpdate()">
+    ↻ Actualizar resultados ahora
+  </button>
+  <span id="update-status" style="font-size:0.8rem;margin-left:0.75rem;color:var(--text2)"></span>
+</div>
+
 <!-- Crear partido -->
 <div class="card">
   <div class="card-title">Crear partido</div>
@@ -117,4 +130,34 @@
   <p class="empty-text">No hay partidos. Crea el primero arriba.</p>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function triggerUpdate() {
+  const btn = document.getElementById('btn-update');
+  const status = document.getElementById('update-status');
+  btn.disabled = true;
+  status.textContent = 'Consultando API...';
+  status.style.color = 'var(--text2)';
+  try {
+    const r = await fetch('/admin/update-results', { method: 'POST' });
+    const data = await r.json();
+    if (data.ok) {
+      status.textContent = data.updated
+        ? `✓ ${data.updated} resultado(s) actualizado(s)`
+        : '✓ Sin cambios nuevos';
+      status.style.color = 'var(--accent)';
+    } else {
+      status.textContent = '✗ ' + (data.error || 'Error desconocido');
+      status.style.color = 'var(--red)';
+    }
+  } catch (e) {
+    status.textContent = '✗ Error de red';
+    status.style.color = 'var(--red)';
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
 {% endblock %}

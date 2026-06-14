@@ -13,13 +13,14 @@ Requirements: 1.1–1.5, 2.1–2.5, 3.1–3.7, 4.1–4.7, 5.1–5.5, 6.1–6.3, 
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session
 
@@ -71,7 +72,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from app.seed import seed_if_empty
     seed_if_empty()
     logger.info("Application startup complete.")
+
+    async def _auto_update_loop() -> None:
+        while True:
+            await asyncio.sleep(300)  # cada 5 minutos
+            try:
+                from app.updater import update_results
+                result = update_results()
+                if result["updated"]:
+                    logger.info("Auto-update: %d resultados actualizados.", result["updated"])
+            except Exception as exc:
+                logger.error("Auto-update falló: %s", exc)
+
+    task = asyncio.create_task(_auto_update_loop())
     yield
+    task.cancel()
     logger.info("Application shutdown.")
 
 
@@ -261,6 +276,17 @@ async def bracket_view(
         right_cols=right_cols,
         final_match=fin[0] if fin else None,
     ))
+
+
+@app.post("/admin/update-results", response_class=JSONResponse)
+async def admin_update_results(
+    current_user=Depends(get_current_user_or_none),
+) -> JSONResponse:
+    if not current_user or not current_user.is_admin:
+        return JSONResponse({"ok": False, "error": "No autorizado"}, status_code=403)
+    from app.updater import update_results
+    result = update_results()
+    return JSONResponse({"ok": result["error"] is None, **result})
 
 
 @app.get("/admin", response_class=HTMLResponse)
