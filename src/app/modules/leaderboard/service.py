@@ -47,12 +47,20 @@ class LeaderboardService:
         if user_ids is not None:
             users = [u for u in users if u.id in user_ids]
 
+        # Los puntos bonus (campeón/goleador) aplican al torneo completo, no a
+        # una fase específica: solo se suman cuando no hay filtro de fase.
+        bonus_map: dict[int, int] = {}
+        if min_phase is None:
+            from app.modules.bonus.service import BonusService
+            bonus_map = BonusService(self._session).user_points_map()
+
         entries = []
         for user in users:
             if min_phase is not None:
                 total, winners, exacts = self._compute_scores_from_phase(user.id, min_phase)
             else:
                 total, winners, exacts = self._compute_scores(user.id)
+                total += bonus_map.get(user.id, 0)
             entries.append(
                 LeaderboardEntry(
                     position=0,

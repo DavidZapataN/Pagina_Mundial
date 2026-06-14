@@ -28,7 +28,7 @@ from app.exceptions import (
     MatchNotFoundError,
     UnauthenticatedError,
 )
-from app.models import Match, MatchStatus, TournamentPhase, User
+from app.models import Match, MatchStatus, PredictedWinner, TournamentPhase, User
 from app.modules.auth.dependencies import get_current_user_or_none, require_current_user
 from app.modules.matches.service import MatchService
 
@@ -89,16 +89,16 @@ async def list_matches(
     Requirements: 2.1, 2.2
     """
     from collections import defaultdict
-    from datetime import datetime
 
     from app.models import Prediction
-    from app.utils import cot_date, format_date_header
+    from app.utils import cot_date, format_date_header, utcnow
     from sqlmodel import select as sql_select
 
     svc = MatchService(session)
+    svc.auto_transition_statuses()  # refleja "en vivo" sin esperar al loop
     all_matches = svc.list_matches(group_by="date")
 
-    now = datetime.utcnow()
+    now = utcnow()
 
     # Filtro upcoming / past / all
     if filter == "upcoming":
@@ -129,6 +129,16 @@ async def list_matches(
             if m.id not in user_predictions and m.status == MatchStatus.pendiente
         ]
 
+    # Hero: próximo partido aún abierto + cuántos faltan por predecir
+    upcoming_open = sorted(
+        [m for m in all_matches if m.status == MatchStatus.pendiente and m.kickoff_time > now],
+        key=lambda m: m.kickoff_time,
+    )
+    next_match = upcoming_open[0] if upcoming_open else None
+    pending_count = 0
+    if current_user:
+        pending_count = sum(1 for m in upcoming_open if m.id not in user_predictions)
+
     # Agrupar por fecha COT
     grouped: dict[object, list] = defaultdict(list)
     for m in matches:
@@ -148,6 +158,8 @@ async def list_matches(
         user_predictions=user_predictions,
         active_filter=filter,
         unpredicted=unpredicted,
+        next_match=next_match,
+        pending_count=pending_count,
     ))
 
 
@@ -246,6 +258,7 @@ async def register_result(
     match_id: int,
     home_goals: int = Form(...),
     away_goals: int = Form(...),
+    advanced: str = Form(""),
     current_user: User | None = Depends(get_current_user_or_none),
     session: Session = Depends(get_session),
 ) -> Response:
@@ -253,13 +266,24 @@ async def register_result(
     Registra el resultado oficial de un partido (solo administradores).
     Dispara automáticamente el cálculo de puntuaciones.
 
+    ``advanced`` ("home"/"away") indica quién avanzó cuando una eliminatoria
+    quedó empatada y se definió por penales; se ignora si el marcador no es
+    empate. Vacío en fase de grupos.
+
     Requirements: 2.4, 2.5, 4.1, 4.7
     """
     admin = _require_admin(current_user)
 
+    # Solo tiene sentido el "avanzó por penales" si el marcador quedó empatado.
+    official_winner: PredictedWinner | None = None
+    if home_goals == away_goals and advanced in ("home", "away"):
+        official_winner = PredictedWinner(advanced)
+
     svc = MatchService(session)
     try:
-        match, scores = svc.register_result(match_id, home_goals, away_goals)
+        match, scores = svc.register_result(
+            match_id, home_goals, away_goals, official_winner=official_winner
+        )
     except InvalidScoreError:
         return HTMLResponse(
             _error_html(ERROR_MESSAGES["invalid_score"], f"/admin"),

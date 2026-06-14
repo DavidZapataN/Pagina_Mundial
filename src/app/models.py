@@ -14,10 +14,17 @@ Data invariants (enforced at the service layer):
 
 import secrets
 import string
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 
 from sqlmodel import Field, SQLModel, UniqueConstraint
+
+from app.utils import utcnow
+
+# Tras el kickoff, un partido sin resultado se considera "en vivo" solo durante
+# esta ventana. Pasado este tiempo deja de mostrarse como en vivo y queda
+# "por confirmar" hasta que el updater (o el admin) registre el marcador.
+LIVE_WINDOW = timedelta(hours=2, minutes=30)
 
 
 def _random_code(length: int = 6) -> str:
@@ -73,7 +80,7 @@ class User(SQLModel, table=True):
     username: str = Field(unique=True, index=True, max_length=50)
     password_hash: str
     is_admin: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class Session(SQLModel, table=True):
@@ -108,6 +115,22 @@ class Match(SQLModel, table=True):
     status: MatchStatus = Field(default=MatchStatus.pendiente)
     official_home_goals: int | None = Field(default=None, ge=0)
     official_away_goals: int | None = Field(default=None, ge=0)
+    # Ganador real del partido. En fase de grupos coincide con el marcador,
+    # pero en eliminatorias un empate se define por penales: aquí guardamos
+    # quién avanzó para puntuar correctamente el acierto de ganador.
+    official_winner: PredictedWinner | None = Field(default=None)
+
+    @property
+    def is_live(self) -> bool:
+        """En curso y dentro de la ventana de juego (para el badge "🔴 En vivo")."""
+        if self.status != MatchStatus.en_curso:
+            return False
+        return utcnow() - self.kickoff_time <= LIVE_WINDOW
+
+    @property
+    def awaiting_result(self) -> bool:
+        """En curso pero la ventana de juego ya pasó sin resultado registrado."""
+        return self.status == MatchStatus.en_curso and not self.is_live
 
 
 class Prediction(SQLModel, table=True):
@@ -130,8 +153,8 @@ class Prediction(SQLModel, table=True):
     pred_home_goals: int = Field(ge=0)
     pred_away_goals: int = Field(ge=0)
     points: int | None = Field(default=None)  # NULL until match is finalizado
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
 
 class PoolGroup(SQLModel, table=True):
@@ -141,7 +164,7 @@ class PoolGroup(SQLModel, table=True):
     name: str = Field(max_length=60)
     join_code: str = Field(unique=True, index=True, max_length=8, default_factory=_random_code)
     creator_id: int = Field(foreign_key="user.id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
     start_phase: TournamentPhase | None = Field(default=None)
 
 
@@ -153,4 +176,32 @@ class UserPoolGroup(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
     group_id: int = Field(foreign_key="poolgroup.id", index=True)
-    joined_at: datetime = Field(default_factory=datetime.utcnow)
+    joined_at: datetime = Field(default_factory=utcnow)
+
+
+class BonusPrediction(SQLModel, table=True):
+    """
+    Predicción "bonus" de cada usuario para todo el torneo: campeón y goleador.
+
+    Se bloquea cuando arranca el Mundial (primer partido). ``points`` queda en
+    NULL hasta que el admin registra los resultados oficiales.
+    """
+
+    __table_args__ = (UniqueConstraint("user_id"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True, unique=True)
+    champion: str | None = Field(default=None, max_length=60)
+    top_scorer: str | None = Field(default=None, max_length=80)
+    points: int | None = Field(default=None)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+class TournamentBonus(SQLModel, table=True):
+    """Resultado oficial de los bonus (singleton: siempre id=1)."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    champion: str | None = Field(default=None, max_length=60)
+    top_scorer: str | None = Field(default=None, max_length=80)
+    updated_at: datetime = Field(default_factory=utcnow)

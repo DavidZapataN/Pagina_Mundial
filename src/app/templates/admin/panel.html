@@ -19,6 +19,33 @@
   <span id="update-status" style="font-size:0.8rem;margin-left:0.75rem;color:var(--text2)"></span>
 </div>
 
+<!-- Resultado oficial de bonus -->
+<div class="card" style="margin-bottom:0.75rem">
+  <div class="card-title">🎯 Resultado de bonus</div>
+  <p style="font-size:0.82rem;color:var(--text2);margin-bottom:1rem">
+    Define campeón y goleador oficiales. Al guardar se re-puntúan todos los bonus.
+  </p>
+  <form action="/bonus/official" method="post">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.9rem">
+      <div class="form-field" style="margin:0">
+        <label class="form-label">🏆 Campeón</label>
+        <select name="champion">
+          <option value="">— Sin definir —</option>
+          {% for t in bonus_teams %}
+            <option value="{{ t }}" {% if bonus_official.champion == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field" style="margin:0">
+        <label class="form-label">⚽ Goleador</label>
+        <input type="text" name="top_scorer" placeholder="Nombre del jugador"
+               value="{{ bonus_official.top_scorer or '' }}">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary" style="margin-top:1rem">Guardar resultado de bonus</button>
+  </form>
+</div>
+
 <!-- Crear partido -->
 <div class="card">
   <div class="card-title">Crear partido</div>
@@ -71,8 +98,10 @@
             {{ match.kickoff_time | cot_time }} COT · {{ match.kickoff_time.strftime('%d/%m %H:%M') }} UTC
           </div>
         </div>
-        {% if match.status == 'en_curso' %}
+        {% if match.is_live %}
           <span class="sbadge sb-live">En vivo</span>
+        {% elif match.awaiting_result %}
+          <span class="sbadge sb-pending">⏳ Por confirmar</span>
         {% else %}
           <span class="sbadge sb-pending">Próximo</span>
         {% endif %}
@@ -87,6 +116,16 @@
           <input type="number" name="away_goals" min="0" max="20" value="0" required
                  style="width:60px;text-align:center;font-size:1.1rem;font-weight:700;padding:0.4rem">
         </div>
+        {% if match.phase != 'grupos' %}
+        <div style="display:flex;align-items:center;gap:0.4rem">
+          <span style="font-size:0.7rem;color:var(--text2)">Avanza (si hay penales):</span>
+          <select name="advanced" style="padding:0.35rem;font-size:0.8rem">
+            <option value="">—</option>
+            <option value="home">🏠 {{ match.home_team | team_code }}</option>
+            <option value="away">✈️ {{ match.away_team | team_code }}</option>
+          </select>
+        </div>
+        {% endif %}
         <button type="submit" class="btn btn-primary btn-sm">Registrar</button>
 
         <!-- Cambiar a en_curso -->

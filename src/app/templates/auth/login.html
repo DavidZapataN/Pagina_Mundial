@@ -12,6 +12,9 @@
   {% if error %}
     <div class="alert alert-error">{{ error }}</div>
   {% endif %}
+  {% if request and request.query_params.get('changed') %}
+    <div class="alert alert-ok">✓ Contraseña actualizada. Inicia sesión de nuevo.</div>
+  {% endif %}
 
   <div class="card">
     <form action="/auth/login" method="post">

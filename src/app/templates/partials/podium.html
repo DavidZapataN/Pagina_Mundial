@@ -1,0 +1,63 @@
+{# Podio + lista. Espera: entries (ordenadas por posición), current_user #}
+{% set first  = entries[0] if entries | length >= 1 else None %}
+{% set second = entries[1] if entries | length >= 2 else None %}
+{% set third  = entries[2] if entries | length >= 3 else None %}
+
+<div class="podium">
+  {# Segundo lugar #}
+  <div class="pod-col second {% if current_user and second and second.user_id == current_user.id %}me{% endif %}">
+    {% if second %}
+      <div class="pod-medal">🥈</div>
+      <div class="pod-avatar">{{ second.username[0] | upper }}</div>
+      <div class="pod-name">{{ second.username }}</div>
+      <div class="pod-pts">{{ second.total_points }} pts</div>
+      <div class="pod-bar">2</div>
+    {% endif %}
+  </div>
+
+  {# Primer lugar #}
+  <div class="pod-col first {% if current_user and first and first.user_id == current_user.id %}me{% endif %}">
+    {% if first %}
+      <div class="pod-medal">👑</div>
+      <div class="pod-avatar">{{ first.username[0] | upper }}</div>
+      <div class="pod-name">{{ first.username }}</div>
+      <div class="pod-pts">{{ first.total_points }} pts</div>
+      <div class="pod-bar">1</div>
+    {% endif %}
+  </div>
+
+  {# Tercer lugar #}
+  <div class="pod-col third {% if current_user and third and third.user_id == current_user.id %}me{% endif %}">
+    {% if third %}
+      <div class="pod-medal">🥉</div>
+      <div class="pod-avatar">{{ third.username[0] | upper }}</div>
+      <div class="pod-name">{{ third.username }}</div>
+      <div class="pod-pts">{{ third.total_points }} pts</div>
+      <div class="pod-bar">3</div>
+    {% endif %}
+  </div>
+</div>
+
+{# Resto de la tabla (posición 4 en adelante) #}
+{% if entries | length > 3 %}
+<div class="lb-list" style="margin-top:0.75rem">
+  {% for entry in entries[3:] %}
+  <div class="lb-row {% if current_user and entry.user_id == current_user.id %}me{% endif %}">
+    <div class="lb-pos"><span style="color:var(--text2)">{{ entry.position }}</span></div>
+    <div class="lb-name">
+      {{ entry.username }}
+      {% if current_user and entry.user_id == current_user.id %}
+        <span style="font-size:0.7rem;color:var(--accent);margin-left:0.3rem">(tú)</span>
+      {% endif %}
+      <div class="lb-sub">
+        ⭐ {{ entry.exact_score_count }} exactos · ✓ {{ entry.winner_count }} ganadores
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div class="lb-pts">{{ entry.total_points }}</div>
+      <div class="lb-pts-label">pts</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

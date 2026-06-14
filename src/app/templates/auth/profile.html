@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Mi perfil — Polla del Mundial{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Mi perfil</h1>
+</div>
+
+<div class="card" style="text-align:center">
+  <div class="profile-avatar">{{ current_user.username[0] | upper }}</div>
+  <div style="font-size:1.15rem;font-weight:800;margin-top:0.6rem">{{ current_user.username }}</div>
+  <div style="font-size:0.78rem;color:var(--text2);margin-top:0.2rem">
+    {% if current_user.is_admin %}⚙️ Administrador{% else %}⚽ Jugador{% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">🔒 Cambiar contraseña</div>
+
+  {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+  {% endif %}
+
+  <form action="/auth/profile" method="post">
+    <div class="form-field">
+      <label class="form-label" for="current_password">Contraseña actual</label>
+      <input type="password" id="current_password" name="current_password" required>
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="new_password">Nueva contraseña</label>
+      <input type="password" id="new_password" name="new_password" required minlength="4">
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="confirm_password">Confirmar nueva contraseña</label>
+      <input type="password" id="confirm_password" name="confirm_password" required minlength="4">
+    </div>
+    <button type="submit" class="btn btn-primary btn-full">Guardar cambios</button>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-title">🔔 Recordatorios</div>
+  <p style="font-size:0.83rem;color:var(--text2);line-height:1.5;margin-bottom:0.9rem">
+    Activa los avisos en este dispositivo para que te recordemos los partidos
+    que aún no has predicho cuando faltan pocas horas.
+  </p>
+  <button type="button" id="btn-notif" class="btn btn-outline">Activar recordatorios</button>
+  <div id="notif-status" style="font-size:0.78rem;margin-top:0.6rem;color:var(--text2)"></div>
+  <p style="font-size:0.7rem;color:var(--text2);margin-top:0.7rem;line-height:1.4">
+    Nota: los avisos llegan mientras la app esté abierta o en segundo plano en tu teléfono.
+  </p>
+</div>
+
+<div style="text-align:center;margin:1rem 0 2rem">
+  <form action="/auth/logout" method="post">
+    <button type="submit" class="btn btn-outline">Cerrar sesión</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const btn = document.getElementById('btn-notif');
+  const status = document.getElementById('notif-status');
+  if (!('Notification' in window)) {
+    btn.disabled = true;
+    status.textContent = 'Tu navegador no soporta notificaciones.';
+    return;
+  }
+  function refresh() {
+    if (Notification.permission === 'granted') {
+      status.textContent = '✓ Recordatorios activados.';
+      status.style.color = 'var(--accent)';
+      btn.textContent = 'Recordatorios activados';
+      btn.disabled = true;
+      localStorage.setItem('remindersOn', '1');
+    } else if (Notification.permission === 'denied') {
+      status.textContent = 'Bloqueados. Actívalos desde los ajustes del navegador.';
+      status.style.color = 'var(--red)';
+    }
+  }
+  btn.addEventListener('click', () => {
+    Notification.requestPermission().then(p => {
+      refresh();
+      if (p === 'granted') new Notification('⚽ Polla del Mundial', { body: '¡Recordatorios activados!' });
+    });
+  });
+  refresh();
+})();
+</script>
+{% endblock %}

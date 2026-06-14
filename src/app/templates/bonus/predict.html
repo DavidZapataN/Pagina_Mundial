@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Bonus — Polla del Mundial 2026{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">🎯 Bonus</h1>
+</div>
+
+<div class="card" style="margin-bottom:0.5rem">
+  <p style="font-size:0.85rem;color:var(--text2);line-height:1.5">
+    Predice el <strong style="color:var(--text)">campeón</strong> y el
+    <strong style="color:var(--text)">goleador</strong> del Mundial.
+    Estos puntos se suman a tu total en la tabla.
+  </p>
+  <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:0.7rem">
+    <span class="sbadge sb-exact">🏆 Campeón +{{ champion_pts }}</span>
+    <span class="sbadge sb-winner">⚽ Goleador +{{ topscorer_pts }}</span>
+  </div>
+</div>
+
+{% if saved %}
+  <div class="alert alert-ok" style="margin:0 1rem 0.5rem">✓ Bonus guardado.</div>
+{% endif %}
+
+{% if official.champion or official.top_scorer %}
+<!-- Resultados oficiales -->
+<div class="card">
+  <div class="card-title">Resultados oficiales</div>
+  <div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.9rem">
+    <div>🏆 Campeón: <strong>{{ official.champion or '—' }}</strong></div>
+    <div>⚽ Goleador: <strong>{{ official.top_scorer or '—' }}</strong></div>
+  </div>
+  {% if my_bonus and my_bonus.points is not none %}
+    <div class="alert {% if my_bonus.points > 0 %}alert-ok{% else %}alert-error{% endif %}" style="margin-top:0.85rem;margin-bottom:0">
+      {% if my_bonus.points > 0 %}🎉 Ganaste {{ my_bonus.points }} pts en bonus{% else %}No acertaste los bonus esta vez{% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if is_open %}
+<div class="card">
+  <div class="card-title">Tu predicción</div>
+  <form action="/bonus" method="post">
+    <div class="form-field">
+      <label class="form-label" for="champion">🏆 Campeón del Mundial</label>
+      <select id="champion" name="champion">
+        <option value="">— Elegir equipo —</option>
+        {% for t in teams %}
+          <option value="{{ t }}" {% if my_bonus and my_bonus.champion == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="top_scorer">⚽ Goleador del torneo</label>
+      <input type="text" id="top_scorer" name="top_scorer"
+             placeholder="Nombre del jugador"
+             value="{{ my_bonus.top_scorer if my_bonus and my_bonus.top_scorer else '' }}">
+    </div>
+    <button type="submit" class="btn btn-primary btn-full">Guardar bonus</button>
+  </form>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-title">🔒 Bonus cerrado</div>
+  <p style="font-size:0.85rem;color:var(--text2);margin-bottom:0.85rem">
+    El Mundial ya comenzó: ya no se pueden cambiar los bonus.
+  </p>
+  {% if my_bonus and (my_bonus.champion or my_bonus.top_scorer) %}
+    <div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.9rem">
+      <div>🏆 Tu campeón: <strong>{{ my_bonus.champion or '—' }}</strong></div>
+      <div>⚽ Tu goleador: <strong>{{ my_bonus.top_scorer or '—' }}</strong></div>
+    </div>
+  {% else %}
+    <p style="font-size:0.85rem;color:var(--text2)">No registraste bonus a tiempo.</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

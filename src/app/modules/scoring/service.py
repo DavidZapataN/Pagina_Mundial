@@ -63,19 +63,33 @@ class ScoringService:
         pred_away: int,
         official_home: int,
         official_away: int,
+        official_winner: str | None = None,
     ) -> int:
         """
         Retorna 5, 3 o 0 según las reglas de puntuación.
 
         Es una función pura — no accede a la base de datos.
 
+        Regla de eliminatorias definidas por penales (modelo "híbrido"): el
+        marcador guardado es el de los 120' (un empate), y ``official_winner``
+        indica quién avanzó por penales. Para no perjudicar a nadie, se da el
+        acierto de resultado (+3) tanto a quien predijo el resultado del
+        marcador (el empate) como a quien predijo al equipo que avanzó. Solo
+        queda en 0 quien apostó por el equipo eliminado.
+
+        En fase de grupos ``official_winner`` es ``None`` y todo se deriva del
+        marcador, sin cambios de comportamiento.
+
         Requirements: 4.2, 4.3, 4.4
         """
         if pred_home == official_home and pred_away == official_away:
             return 5
 
-        official_winner = _official_winner(official_home, official_away)
-        if predicted_winner == official_winner:
+        # Acierto del resultado según el marcador (p. ej. empate en 120').
+        if predicted_winner == _official_winner(official_home, official_away):
+            return 3
+        # Acierto de quién avanzó por penales (solo eliminatorias).
+        if official_winner and predicted_winner == official_winner:
             return 3
 
         return 0
@@ -89,6 +103,7 @@ class ScoringService:
         match_id: int,
         official_home: int,
         official_away: int,
+        official_winner: str | None = None,
     ) -> list[UserScore]:
         """
         Calcula y persiste los puntos de todos los usuarios que predijeron
@@ -116,6 +131,7 @@ class ScoringService:
                     pred_away=pred.pred_away_goals,
                     official_home=official_home,
                     official_away=official_away,
+                    official_winner=official_winner,
                 )
             except Exception as exc:
                 logger.error(

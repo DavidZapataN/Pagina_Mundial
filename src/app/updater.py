@@ -14,8 +14,36 @@ from datetime import datetime, timedelta
 from sqlmodel import Session, select
 
 from app.database import engine
-from app.models import Match, MatchStatus
+from app.models import Match, MatchStatus, PredictedWinner
 from app.modules.matches.service import MatchService
+
+# Mapeo del campo "winner" de football-data.org → quién avanzó.
+# En eliminatorias define correctamente al que pasó por penales.
+_WINNER_MAP: dict[str, PredictedWinner] = {
+    "HOME_TEAM": PredictedWinner.home,
+    "AWAY_TEAM": PredictedWinner.away,
+    "DRAW": PredictedWinner.draw,
+}
+
+
+def _scoreline(score: dict) -> tuple[int | None, int | None]:
+    """
+    Marcador que cuenta para la polla a partir del nodo ``score`` de
+    football-data: el resultado de los 90' + alargue, SIN penales.
+
+    Ojo: ``score.fullTime`` incluye los goles de la tanda de penales (un 1-1
+    definido por penales aparece como 7-6). Por eso, cuando hay alargue/penales
+    usamos ``regularTime`` + ``extraTime``; en partidos normales ``regularTime``
+    no viene y usamos ``fullTime``.
+    """
+    regular = score.get("regularTime") or {}
+    if regular.get("home") is not None and regular.get("away") is not None:
+        extra = score.get("extraTime") or {}
+        home = regular["home"] + (extra.get("home") or 0)
+        away = regular["away"] + (extra.get("away") or 0)
+        return home, away
+    full = score.get("fullTime") or {}
+    return full.get("home"), full.get("away")
 
 logger = logging.getLogger("polla.updater")
 
@@ -75,9 +103,9 @@ def update_results() -> dict:
         for api_m in api_matches:
             home_en = api_m.get("homeTeam", {}).get("name", "")
             away_en = api_m.get("awayTeam", {}).get("name", "")
-            ft = api_m.get("score", {}).get("fullTime", {})
-            home_goals = ft.get("home")
-            away_goals = ft.get("away")
+            score = api_m.get("score", {})
+            home_goals, away_goals = _scoreline(score)
+            official_winner = _WINNER_MAP.get(score.get("winner") or "")
             utc_str = api_m.get("utcDate", "")
 
             if not (home_en and away_en and home_goals is not None and away_goals is not None):
@@ -106,7 +134,7 @@ def update_results() -> dict:
                 continue
 
             try:
-                svc.register_result(local.id, int(home_goals), int(away_goals))
+                svc.register_result(local.id, int(home_goals), int(away_goals), official_winner)
                 logger.info("Resultado: %s %d-%d %s", home_es, home_goals, away_goals, away_es)
                 updated += 1
             except Exception as exc:

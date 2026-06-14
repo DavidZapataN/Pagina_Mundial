@@ -12,7 +12,7 @@ Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import bcrypt
 from itsdangerous import BadSignature, URLSafeTimedSerializer
@@ -22,6 +22,7 @@ from app.config import settings
 from app.exceptions import InvalidCredentialsError, UsernameAlreadyExistsError
 from app.models import Session as DBSession
 from app.models import User
+from app.utils import utcnow
 
 logger = logging.getLogger("polla.auth")
 
@@ -122,7 +123,7 @@ class AuthService:
         # Build a signed token whose payload is the user's id.
         token: str = self._serializer.dumps({"user_id": user.id})
 
-        now = datetime.utcnow()
+        now = utcnow()
         session = DBSession(
             user_id=user.id,  # type: ignore[arg-type]
             token=token,
@@ -133,6 +134,35 @@ class AuthService:
         self._session.commit()
         logger.info("User logged in: %s", username)
         return token
+
+    def change_password(
+        self, user_id: int, current_password: str, new_password: str
+    ) -> None:
+        """
+        Cambia la contraseña de un usuario tras verificar la actual.
+
+        Invalida todas las sesiones existentes para forzar un nuevo login.
+
+        Raises:
+            InvalidCredentialsError: si la contraseña actual no coincide o la
+                nueva no cumple la longitud mínima.
+        """
+        user = self._session.get(User, user_id)
+        if user is None or not bcrypt.checkpw(
+            current_password.encode("utf-8"), user.password_hash.encode("utf-8")
+        ):
+            raise InvalidCredentialsError("La contraseña actual es incorrecta")
+
+        if len(new_password) < 4:
+            raise InvalidCredentialsError("La nueva contraseña es demasiado corta")
+
+        user.password_hash = bcrypt.hashpw(
+            new_password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
+        self._session.add(user)
+        self._invalidate_existing_sessions(user_id)
+        self._session.commit()
+        logger.info("Password changed for user_id=%d", user_id)
 
     def logout(self, session_token: str) -> None:
         """
@@ -165,7 +195,7 @@ class AuthService:
             return None
 
         # Renew the sliding window.
-        now = datetime.utcnow()
+        now = utcnow()
         db_session.last_accessed = now
         db_session.expires_at = now + timedelta(hours=settings.SESSION_DURATION_HOURS)
         self._session.add(db_session)
@@ -211,7 +241,7 @@ class AuthService:
         if db_session is None:
             return None
 
-        if datetime.utcnow() > db_session.expires_at:
+        if utcnow() > db_session.expires_at:
             # Session has expired — clean it up.
             self._session.delete(db_session)
             self._session.commit()

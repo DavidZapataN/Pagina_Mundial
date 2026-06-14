@@ -189,8 +189,10 @@
             <span class="bsnum snum-official" style="width:26px;height:26px;font-size:0.85rem">{{ match.official_home_goals }}</span>
             <span style="font-size:0.7rem;color:var(--text2)">–</span>
             <span class="bsnum snum-official" style="width:26px;height:26px;font-size:0.85rem">{{ match.official_away_goals }}</span>
-          {% elif match.status == 'en_curso' %}
+          {% elif match.is_live %}
             <span class="sbadge sb-live" style="font-size:0.55rem;padding:0.15rem 0.5rem">LIVE</span>
+          {% elif match.awaiting_result %}
+            <span class="sbadge sb-pending" style="font-size:0.55rem;padding:0.15rem 0.5rem">⏳</span>
           {% else %}
             <span style="font-size:0.68rem;color:var(--text2);font-weight:600">{{ match.kickoff_time | cot_time }}</span>
           {% endif %}
@@ -231,8 +233,10 @@
         <span class="bsnum snum-official" style="width:30px;height:30px">{{ match.official_home_goals }}</span>
         <span style="font-size:0.8rem;color:var(--text2)">–</span>
         <span class="bsnum snum-official" style="width:30px;height:30px">{{ match.official_away_goals }}</span>
-      {% elif match.status == 'en_curso' %}
+      {% elif match.is_live %}
         <span class="sbadge sb-live" style="font-size:0.6rem">LIVE</span>
+      {% elif match.awaiting_result %}
+        <span class="sbadge sb-pending" style="font-size:0.6rem">⏳</span>
       {% else %}
         <div style="text-align:center">
           <div style="font-size:0.72rem;font-weight:700;color:var(--text2)">{{ match.kickoff_time | cot_time }}</div>
