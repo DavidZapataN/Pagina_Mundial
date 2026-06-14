@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Mis predicciones — Mundial 2026{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Mis picks</h1>
+  {% if entries %}
+    <span class="page-count">{{ entries | length }}</span>
+  {% endif %}
+</div>
+
+<!-- Filtro por fase — usa p.value para generar URLs correctas -->
+<div class="filter-row">
+  <a href="/predictions/me" class="ftab {% if not selected_phase %}active{% endif %}">Todas</a>
+  {% for p in phases %}
+    <a href="/predictions/me?phase={{ p.value }}"
+       class="ftab {% if selected_phase and selected_phase.value == p.value %}active{% endif %}">
+      {{ p.value | title }}
+    </a>
+  {% endfor %}
+</div>
+
+{% if not entries %}
+  <div class="empty-state">
+    <div class="empty-icon">📋</div>
+    <p class="empty-text">
+      {% if selected_phase %}No tienes predicciones en esta fase.
+      {% else %}Aún no has hecho predicciones.{% endif %}
+    </p>
+    <a href="/matches" class="btn btn-primary">Ver partidos</a>
+  </div>
+{% else %}
+  {% for entry in entries %}
+    {% set pred = entry.prediction %}
+    {% set match = entry.match %}
+    {% set cls = entry.result_classification %}
+    {% set group = get_group(match.home_team, match.away_team) %}
+
+    <div class="match-card-div">
+      <!-- Meta -->
+      <div class="match-meta">
+        <span class="group-tag">
+          {% if group %}Grupo {{ group }}{% else %}{{ match.phase.value | title }}{% endif %}
+        </span>
+        <span class="match-time">
+          {{ match.kickoff_time | cot_time }} COT
+        </span>
+      </div>
+
+      <!-- Equipos -->
+      <div class="match-teams">
+        <!-- Local -->
+        <div class="team-block">
+          <div class="flag-circle flag-circle-sm">
+            <img src="{{ flag_url(match.home_team) }}" alt="{{ match.home_team }}" onerror="this.style.display='none'">
+          </div>
+          <span class="team-code">{{ match.home_team | team_code }}</span>
+          <span class="team-name">{{ match.home_team }}</span>
+        </div>
+
+        <!-- Marcadores -->
+        <div class="score-center">
+          <!-- Mi predicción -->
+          <div style="font-size:0.6rem;color:var(--text2);margin-bottom:0.2rem;text-align:center">Mi pick</div>
+          <div class="score-nums">
+            <span class="snum snum-pred">{{ pred.pred_home_goals }}</span>
+            <span class="score-sep">–</span>
+            <span class="snum snum-pred">{{ pred.pred_away_goals }}</span>
+          </div>
+          {% if match.status == 'finalizado' %}
+          <div style="font-size:0.6rem;color:var(--text2);margin-top:0.35rem;text-align:center">Oficial</div>
+          <div class="score-nums">
+            <span class="snum snum-official">{{ match.official_home_goals }}</span>
+            <span class="score-sep">–</span>
+            <span class="snum snum-official">{{ match.official_away_goals }}</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Visitante -->
+        <div class="team-block">
+          <div class="flag-circle flag-circle-sm">
+            <img src="{{ flag_url(match.away_team) }}" alt="{{ match.away_team }}" onerror="this.style.display='none'">
+          </div>
+          <span class="team-code">{{ match.away_team | team_code }}</span>
+          <span class="team-name">{{ match.away_team }}</span>
+        </div>
+      </div>
+
+      <!-- Footer: resultado + ganador predicho -->
+      <div class="match-footer">
+        <span style="font-size:0.7rem;color:var(--text2);display:flex;align-items:center;gap:0.3rem">
+          <span>Elegí:</span>
+          {% if pred.predicted_winner == 'home' %}
+            <img src="{{ flag_url(match.home_team) }}" alt="" style="width:16px;height:12px;object-fit:cover;border-radius:2px">
+            <span>{{ match.home_team }}</span>
+          {% elif pred.predicted_winner == 'away' %}
+            <img src="{{ flag_url(match.away_team) }}" alt="" style="width:16px;height:12px;object-fit:cover;border-radius:2px">
+            <span>{{ match.away_team }}</span>
+          {% else %}
+            <span>🤝 Empate</span>
+          {% endif %}
+        </span>
+
+        {% if cls == 'marcador_exacto' %}
+          <span class="sbadge sb-exact" {% if pred.points == 5 %}data-celebrate{% endif %}>⭐ Exacto +5</span>
+        {% elif cls == 'ganador_acertado' %}
+          <span class="sbadge sb-winner">✓ Ganador +3</span>
+        {% elif cls == 'fallida' %}
+          <span class="sbadge sb-miss">✗ Sin puntos</span>
+        {% else %}
+          <span class="sbadge sb-pending">Pendiente</span>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,14 @@
+version: 1
+frontend:
+  phases:
+    build:
+      commands:
+        - echo "Construyendo imagen Docker para Polla del Mundial..."
+        - docker build -t polla-mundial .
+  artifacts:
+    baseDirectory: .
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - ~/.cache/pip/**/*

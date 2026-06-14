@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Mis Tablas — Mundial 2026{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Mis Tablas</h1>
+  {% if group_data %}
+    <span class="page-count">{{ group_data | length }} grupo{{ 's' if group_data | length != 1 else '' }}</span>
+  {% endif %}
+</div>
+
+{% if not group_data %}
+<div class="empty-state">
+  <div class="empty-icon">🏆</div>
+  <p class="empty-text">No perteneces a ningún grupo todavía.<br>¡Crea uno o únete con un código!</p>
+  <a href="/groups" class="btn btn-primary">Gestionar grupos</a>
+</div>
+
+{% else %}
+{% for item in group_data %}
+{% set group = item.info.group %}
+{% set entries = item.entries %}
+
+<div class="mt-card">
+  <!-- Group header -->
+  <div class="mt-group-header">
+    <div style="min-width:0">
+      <div class="mt-group-name">{{ group.name }}</div>
+      <div class="mt-group-meta">
+        {{ item.info.member_count }} {% if item.info.member_count == 1 %}participante{% else %}participantes{% endif %}
+        {% if group.start_phase %} · desde <strong style="color:var(--text)">{{ group.start_phase.value | title }}</strong>{% endif %}
+        {% if item.info.is_creator %} · <span style="color:var(--accent)">tuyo</span>{% endif %}
+      </div>
+    </div>
+    <div style="text-align:right;flex-shrink:0">
+      <div class="group-code" style="font-size:0.7rem;padding:0.18rem 0.5rem;letter-spacing:0.12em">{{ group.join_code }}</div>
+      {% if item.my_position is not none %}
+        <div class="mt-my-pos">
+          {% if item.my_position == 1 %}🥇 Vas primero
+          {% elif item.my_position == 2 %}🥈 Vas segundo
+          {% elif item.my_position == 3 %}🥉 Vas tercero
+          {% else %}Tu posición: #{{ item.my_position }}
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Leaderboard rows -->
+  {% if not entries %}
+    <div style="padding:1.25rem;text-align:center;font-size:0.82rem;color:var(--text2)">Sin puntos aún en este grupo</div>
+  {% else %}
+    {% for entry in entries %}
+    <div class="lb-row {% if current_user and entry.user_id == current_user.id %}me{% endif %}">
+      <div class="lb-pos">
+        {% if entry.position == 1 %}🥇
+        {% elif entry.position == 2 %}🥈
+        {% elif entry.position == 3 %}🥉
+        {% else %}<span style="color:var(--text2);font-size:0.82rem;font-weight:700">{{ entry.position }}</span>{% endif %}
+      </div>
+      <div class="lb-name">
+        {{ entry.username }}
+        {% if current_user and entry.user_id == current_user.id %}
+          <span class="mt-you-badge">TÚ</span>
+        {% endif %}
+        <div class="lb-sub">⭐ {{ entry.exact_score_count }} exactos · ✓ {{ entry.winner_count }} ganadores</div>
+      </div>
+      <div style="text-align:right">
+        <div class="lb-pts">{{ entry.total_points }}</div>
+        <div class="lb-pts-label">pts</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Footer -->
+  <div style="padding:0.55rem 1rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:0.68rem;color:var(--text2)">⭐ exacto = 5 pts &nbsp;·&nbsp; ✓ ganador = 3 pts</span>
+    <a href="/groups/{{ group.id }}" style="font-size:0.75rem;color:var(--accent);text-decoration:none;font-weight:700">Ver detalle →</a>
+  </div>
+</div>
+{% endfor %}
+
+<div style="padding:0 1rem 0.5rem;text-align:center;margin-top:0.25rem">
+  <a href="/groups" class="btn btn-outline btn-sm">Gestionar grupos</a>
+</div>
+{% endif %}
+
+<div style="height:1rem"></div>
+{% endblock %}

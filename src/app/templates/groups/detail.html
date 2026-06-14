@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}{{ group.name }} — Mundial 2026{% endblock %}
+
+{% block content %}
+<div style="padding:0.9rem 1rem 0">
+  <a href="/groups" style="color:var(--text2);text-decoration:none;font-size:0.85rem;font-weight:600">
+    ← Mis grupos
+  </a>
+</div>
+
+<div class="page-header">
+  <h1 class="page-title">{{ group.name }}</h1>
+  {% if entries %}
+    <span class="page-count">{{ entries | length }} jugadores</span>
+  {% endif %}
+</div>
+
+<!-- Código del grupo -->
+<div class="card" style="margin-bottom:0.5rem">
+  <div style="font-size:0.75rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem">
+    Código para invitar
+  </div>
+  <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+    <span class="group-code">{{ group.join_code }}</span>
+    <span style="font-size:0.8rem;color:var(--text2)">Comparte este código con quienes quieras invitar</span>
+  </div>
+
+  {% if group.start_phase %}
+  <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--accent);display:flex;align-items:center;gap:0.4rem">
+    <span>📍</span>
+    <span>Puntos desde: <strong>{{ group.start_phase.value | title }}</strong></span>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Cambiar fase (solo creador) -->
+{% if is_creator %}
+<div class="card" style="margin-bottom:0.5rem">
+  <div style="font-size:0.75rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem">
+    Fase de inicio (solo creador)
+  </div>
+  <form action="/groups/{{ group.id }}/phase" method="post" style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap">
+    <div style="flex:1;min-width:160px">
+      <select name="start_phase" style="margin-bottom:0">
+        <option value="" {% if not group.start_phase %}selected{% endif %}>Desde fase de grupos</option>
+        {% for p in phases %}
+          <option value="{{ p.value }}" {% if group.start_phase and group.start_phase.value == p.value %}selected{% endif %}>
+            Desde {{ p.value | title }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-outline btn-sm">Actualizar</button>
+  </form>
+</div>
+{% endif %}
+
+<!-- Tabla de posiciones del grupo -->
+{% if not entries %}
+  <div class="empty-state">
+    <div class="empty-icon">🏆</div>
+    <p class="empty-text">Aún no hay puntos en este grupo.</p>
+  </div>
+{% else %}
+  <div class="lb-list" style="margin-top:0.5rem">
+    {% for entry in entries %}
+    <div class="lb-row {% if current_user and entry.user_id == current_user.id %}me{% endif %}">
+      <div class="lb-pos">
+        {% if entry.position == 1 %}🥇
+        {% elif entry.position == 2 %}🥈
+        {% elif entry.position == 3 %}🥉
+        {% else %}<span style="color:var(--text2)">{{ entry.position }}</span>{% endif %}
+      </div>
+
+      <div class="lb-name">
+        {{ entry.username }}
+        {% if current_user and entry.user_id == current_user.id %}
+          <span style="font-size:0.7rem;color:var(--accent);margin-left:0.3rem">(tú)</span>
+        {% endif %}
+        <div class="lb-sub">
+          ⭐ {{ entry.exact_score_count }} exactos · ✓ {{ entry.winner_count }} ganadores
+        </div>
+      </div>
+
+      <div style="text-align:right">
+        <div class="lb-pts">{{ entry.total_points }}</div>
+        <div class="lb-pts-label">pts</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="padding:1.25rem 1rem;display:flex;gap:1.25rem;flex-wrap:wrap">
+    <span style="font-size:0.72rem;color:var(--text2)">⭐ Marcador exacto = 5 pts</span>
+    <span style="font-size:0.72rem;color:var(--text2)">✓ Ganador correcto = 3 pts</span>
+  </div>
+{% endif %}
+{% endblock %}

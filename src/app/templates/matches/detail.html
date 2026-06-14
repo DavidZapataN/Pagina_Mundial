@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}{{ match.home_team }} vs {{ match.away_team }} — Mundial 2026{% endblock %}
+
+{% block content %}
+{% set group = get_group(match.home_team, match.away_team) %}
+{% set open = is_prediction_open(match.kickoff_time) %}
+
+<!-- Volver -->
+<div style="padding:0.9rem 1rem 0">
+  <a href="/matches" style="color:var(--text2);text-decoration:none;font-size:0.85rem;font-weight:600">
+    ← Partidos
+  </a>
+</div>
+
+<!-- Tarjeta principal del partido -->
+<div class="card">
+  <!-- Meta -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+    <span class="group-tag" style="font-size:0.75rem">
+      {% if group %}Grupo {{ group }}{% else %}{{ match.phase | title }}{% endif %}
+    </span>
+    <span style="font-size:0.75rem;color:var(--text2)">
+      {{ match.kickoff_time | cot_time }} COT · {{ match.kickoff_time.strftime('%d/%m/%Y %H:%M') }} UTC
+    </span>
+  </div>
+
+  <!-- Estado -->
+  <div style="text-align:center;margin-bottom:0.75rem">
+    {% if match.status == 'en_curso' %}
+      <span class="sbadge sb-live">🔴 En vivo</span>
+    {% elif match.status == 'finalizado' %}
+      <span class="sbadge sb-done">Finalizado</span>
+    {% else %}
+      <span class="sbadge sb-pending">Próximo</span>
+    {% endif %}
+  </div>
+
+  <!-- Equipos y marcador -->
+  <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:1rem;padding:0.5rem 0">
+    <!-- Local -->
+    <div style="text-align:center">
+      <div class="flag-circle" style="width:58px;height:58px;margin:0 auto 0.4rem">
+        <img src="{{ flag_url(match.home_team) }}" alt="{{ match.home_team }}" onerror="this.style.display='none'">
+      </div>
+      <div style="font-size:0.62rem;font-weight:900;color:var(--accent);letter-spacing:0.06em">{{ match.home_team | team_code }}</div>
+      <div style="font-size:0.9rem;font-weight:800;margin-top:0.15rem">{{ match.home_team }}</div>
+      <div style="font-size:0.7rem;color:var(--text2);margin-top:0.15rem">Local</div>
+    </div>
+
+    <!-- Marcador -->
+    <div style="text-align:center">
+      {% if match.status == 'finalizado' %}
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <span class="snum snum-official" style="width:52px;height:52px;font-size:1.6rem">{{ match.official_home_goals }}</span>
+          <span class="score-sep" style="font-size:1.4rem">–</span>
+          <span class="snum snum-official" style="width:52px;height:52px;font-size:1.6rem">{{ match.official_away_goals }}</span>
+        </div>
+        <div style="font-size:0.7rem;color:var(--text2);margin-top:0.5rem">Resultado oficial</div>
+      {% elif match.status == 'en_curso' %}
+        <div style="font-size:1.8rem;font-weight:300;color:var(--text2)">vs</div>
+        <div style="font-size:0.7rem;color:var(--red);margin-top:0.3rem">En curso</div>
+      {% else %}
+        <div style="font-size:1.8rem;font-weight:300;color:var(--text2)">vs</div>
+        <div style="font-size:0.72rem;color:var(--text2);margin-top:0.3rem">
+          {{ match.kickoff_time | cot_time }} COT
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Visitante -->
+    <div style="text-align:center">
+      <div class="flag-circle" style="width:58px;height:58px;margin:0 auto 0.4rem">
+        <img src="{{ flag_url(match.away_team) }}" alt="{{ match.away_team }}" onerror="this.style.display='none'">
+      </div>
+      <div style="font-size:0.62rem;font-weight:900;color:var(--accent);letter-spacing:0.06em">{{ match.away_team | team_code }}</div>
+      <div style="font-size:0.9rem;font-weight:800;margin-top:0.15rem">{{ match.away_team }}</div>
+      <div style="font-size:0.7rem;color:var(--text2);margin-top:0.15rem">Visitante</div>
+    </div>
+  </div>
+</div>
+
+<!-- Sección de predicción -->
+{% if current_user and match.status == 'pendiente' and open %}
+<div class="card">
+  <div class="card-title">
+    {% if prediction %}Actualizar predicción{% else %}Tu predicción{% endif %}
+  </div>
+  <p style="font-size:0.82rem;color:var(--text2);margin-bottom:1.25rem">
+    Elige el marcador. El ganador se calcula automáticamente. Exacto = 5 pts · Solo ganador = 3 pts.
+  </p>
+
+  <div id="detail-pred-status" style="font-size:0.85rem;font-weight:700;margin-bottom:0.75rem;min-height:1.2em"></div>
+
+  <!-- Marcador -->
+  <div class="form-field">
+    <div class="form-label">Marcador</div>
+    <div style="display:flex;align-items:center;gap:0.75rem">
+      <div style="text-align:center;flex:1">
+        <div style="font-size:0.72rem;color:var(--text2);margin-bottom:0.4rem">{{ match.home_team | team_code }} · {{ match.home_team }}</div>
+        <input class="score-input" id="detail-home" type="number" min="0" max="20"
+               value="{{ prediction.pred_home_goals if prediction else 0 }}" required>
+      </div>
+      <div class="score-dash">–</div>
+      <div style="text-align:center;flex:1">
+        <div style="font-size:0.72rem;color:var(--text2);margin-bottom:0.4rem">{{ match.away_team | team_code }} · {{ match.away_team }}</div>
+        <input class="score-input" id="detail-away" type="number" min="0" max="20"
+               value="{{ prediction.pred_away_goals if prediction else 0 }}" required>
+      </div>
+    </div>
+  </div>
+
+  <button type="button" class="btn btn-primary btn-full" id="detail-save-btn" style="margin-top:0.5rem">
+    {% if prediction %}Actualizar predicción{% else %}Guardar predicción{% endif %}
+  </button>
+</div>
+
+{% elif current_user and match.status == 'pendiente' and not open %}
+<div class="card" style="text-align:center">
+  <p style="font-size:0.9rem;font-weight:700">🔒 Predicciones cerradas</p>
+  <p style="font-size:0.82rem;color:var(--text2);margin-top:0.5rem">
+    Las predicciones cierran 15 minutos antes del partido.
+    {% if prediction %}Ya tienes una predicción guardada para este partido.{% endif %}
+  </p>
+  {% if prediction %}
+  <div style="display:flex;align-items:center;gap:0.4rem;justify-content:center;margin-top:1rem">
+    <span class="snum snum-pred" style="width:40px;height:40px;font-size:1.1rem">{{ prediction.pred_home_goals }}</span>
+    <span class="score-sep">–</span>
+    <span class="snum snum-pred" style="width:40px;height:40px;font-size:1.1rem">{{ prediction.pred_away_goals }}</span>
+  </div>
+  {% endif %}
+</div>
+
+{% elif match.status == 'finalizado' and prediction %}
+<!-- Resultado de la predicción -->
+<div class="card">
+  <div class="card-title">Tu predicción</div>
+  <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:0.4rem">
+      <span class="snum snum-pred" style="width:40px;height:40px;font-size:1.1rem">{{ prediction.pred_home_goals }}</span>
+      <span class="score-sep">–</span>
+      <span class="snum snum-pred" style="width:40px;height:40px;font-size:1.1rem">{{ prediction.pred_away_goals }}</span>
+    </div>
+    <span style="font-size:0.82rem;color:var(--text2)">
+      ({% if prediction.predicted_winner == 'home' %}{{ match.home_team }}
+       {% elif prediction.predicted_winner == 'away' %}{{ match.away_team }}
+       {% else %}Empate{% endif %})
+    </span>
+    {% if prediction.points == 5 %}
+      <span class="sbadge sb-exact" data-celebrate style="font-size:0.85rem;padding:0.3rem 0.9rem">⭐ Exacto · +5 pts</span>
+    {% elif prediction.points == 3 %}
+      <span class="sbadge sb-winner" style="font-size:0.85rem;padding:0.3rem 0.9rem">✓ Ganador · +3 pts</span>
+    {% elif prediction.points == 0 %}
+      <span class="sbadge sb-miss" style="font-size:0.85rem;padding:0.3rem 0.9rem">✗ Sin puntos</span>
+    {% endif %}
+  </div>
+</div>
+
+{% elif match.status == 'finalizado' and not prediction %}
+<div class="card" style="text-align:center;color:var(--text2)">
+  <p>No hiciste una predicción para este partido.</p>
+</div>
+
+{% elif match.status == 'pendiente' and not current_user %}
+<div class="card" style="text-align:center">
+  <p style="color:var(--text2);margin-bottom:1rem">Inicia sesión para predecir el resultado.</p>
+  <a href="/auth/login" class="btn btn-primary">Iniciar sesión</a>
+</div>
+
+{% elif match.status == 'en_curso' and prediction %}
+<div class="card">
+  <div class="card-title">Tu predicción</div>
+  <div style="display:flex;align-items:center;gap:0.4rem">
+    <span class="snum snum-pred" style="width:40px;height:40px;font-size:1.1rem">{{ prediction.pred_home_goals }}</span>
+    <span class="score-sep">–</span>
+    <span class="snum snum-pred" style="width:40px;height:40px;font-size:1.1rem">{{ prediction.pred_away_goals }}</span>
+  </div>
+  <p style="font-size:0.8rem;color:var(--text2);margin-top:0.75rem">El partido está en curso. Los puntos se calcularán al finalizar.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if current_user and match.status == 'pendiente' and open %}
+<script>
+(function() {
+  const matchId = {{ match.id }};
+  const homeInput = document.getElementById('detail-home');
+  const awayInput = document.getElementById('detail-away');
+  const statusEl = document.getElementById('detail-pred-status');
+  const saveBtn = document.getElementById('detail-save-btn');
+
+  function getWinner() {
+    const h = parseInt(homeInput.value) || 0;
+    const a = parseInt(awayInput.value) || 0;
+    if (h > a) return 'home';
+    if (a > h) return 'away';
+    return 'draw';
+  }
+
+  function savePrediction() {
+    const home = parseInt(homeInput.value) || 0;
+    const away = parseInt(awayInput.value) || 0;
+    const winner = getWinner();
+
+    statusEl.textContent = 'Guardando...';
+    statusEl.style.color = 'var(--text2)';
+    saveBtn.disabled = true;
+
+    const fd = new FormData();
+    fd.append('home_goals', home);
+    fd.append('away_goals', away);
+    fd.append('predicted_winner', winner);
+
+    fetch('/predictions/' + matchId, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'fetch' },
+      body: fd,
+    })
+    .then(r => r.json())
+    .then(json => {
+      saveBtn.disabled = false;
+      if (json.ok) {
+        statusEl.textContent = '✓ Predicción guardada';
+        statusEl.style.color = 'var(--accent)';
+        saveBtn.textContent = 'Actualizar predicción';
+      } else {
+        statusEl.textContent = json.error || 'Error al guardar';
+        statusEl.style.color = 'var(--red)';
+      }
+    })
+    .catch(() => {
+      saveBtn.disabled = false;
+      statusEl.textContent = 'Error de conexión';
+      statusEl.style.color = 'var(--red)';
+    });
+  }
+
+  saveBtn.addEventListener('click', savePrediction);
+
+  // Also allow saving with Enter key in inputs
+  [homeInput, awayInput].forEach(inp => {
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); savePrediction(); } });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

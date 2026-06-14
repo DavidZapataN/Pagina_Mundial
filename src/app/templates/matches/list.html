@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Partidos — Polla del Mundial 2026{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Partidos</h1>
+  <span class="page-count">{{ total_count }} partidos</span>
+</div>
+
+<!-- Filtros -->
+<div class="filter-row">
+  <a href="/matches?filter=upcoming{% if unpredicted %}&unpredicted=true{% endif %}"
+     class="ftab {% if active_filter == 'upcoming' %}active{% endif %}">Próximos</a>
+  <a href="/matches?filter=past{% if unpredicted %}&unpredicted=true{% endif %}"
+     class="ftab {% if active_filter == 'past' %}active{% endif %}">Pasados</a>
+  <a href="/matches?filter=all{% if unpredicted %}&unpredicted=true{% endif %}"
+     class="ftab {% if active_filter == 'all' %}active{% endif %}">Todos</a>
+  {% if current_user %}
+  <a href="/matches?filter={{ active_filter }}{% if not unpredicted %}&unpredicted=true{% endif %}"
+     class="ftab {% if unpredicted %}active{% endif %}" style="margin-left:auto">
+    Sin predecir
+  </a>
+  {% endif %}
+</div>
+
+{% if not grouped_matches %}
+  <div class="empty-state">
+    <div class="empty-icon">📅</div>
+    <p class="empty-text">
+      {% if active_filter == 'upcoming' %}No hay partidos próximos.
+      {% elif active_filter == 'past' %}Aún no hay partidos finalizados.
+      {% else %}No hay partidos cargados.{% endif %}
+    </p>
+    {% if active_filter != 'all' %}
+      <a href="/matches?filter=all" class="btn btn-outline">Ver todos</a>
+    {% endif %}
+  </div>
+{% else %}
+  {% for date_label, day_matches in grouped_matches %}
+    <div class="date-header">{{ date_label }}</div>
+    {% for match in day_matches %}
+      {% set pred = user_predictions.get(match.id) %}
+      {% set group = get_group(match.home_team, match.away_team) %}
+      {% set open = is_prediction_open(match.kickoff_time) %}
+      {% set can_predict = current_user and match.status == 'pendiente' and open %}
+
+      {% if match.status != 'pendiente' %}
+      <a href="/matches/{{ match.id }}" class="match-card">
+      {% else %}
+      <div class="match-card-div">
+      {% endif %}
+
+        <!-- Meta -->
+        <div class="match-meta">
+          <span class="group-tag">
+            {% if group %}Grupo {{ group }}{% else %}{{ match.phase.value | title }}{% endif %}
+          </span>
+          <span class="match-time">{{ match.kickoff_time | cot_time }} COT</span>
+        </div>
+
+        <!-- Equipos + marcador -->
+        <div class="match-teams">
+
+          <!-- Local -->
+          <div class="team-block">
+            <div class="flag-circle">
+              <img src="{{ flag_url(match.home_team) }}" alt="{{ match.home_team }}"
+                   onerror="this.style.display='none'">
+            </div>
+            <span class="team-code">{{ match.home_team | team_code }}</span>
+            <span class="team-name">{{ match.home_team }}</span>
+          </div>
+
+          <!-- Centro: marcador o inputs editables -->
+          <div class="score-center">
+            {% if match.status == 'finalizado' %}
+              <div class="score-nums">
+                <span class="snum snum-official">{{ match.official_home_goals }}</span>
+                <span class="score-sep">–</span>
+                <span class="snum snum-official">{{ match.official_away_goals }}</span>
+              </div>
+            {% elif can_predict %}
+              <!-- Input directo — es el único marcador, editable -->
+              <div class="score-nums" data-pred="{{ match.id }}">
+                <input type="number" class="pred-score-input home-goals"
+                       min="0" max="20"
+                       value="{{ pred.pred_home_goals if pred else 0 }}">
+                <span class="score-sep">–</span>
+                <input type="number" class="pred-score-input away-goals"
+                       min="0" max="20"
+                       value="{{ pred.pred_away_goals if pred else 0 }}">
+              </div>
+              <div class="pred-status" id="status-{{ match.id }}" style="font-size:0.62rem;font-weight:700;min-height:1em;color:var(--accent)"></div>
+            {% elif match.status == 'pendiente' and pred %}
+              <!-- Predicción guardada pero ya cerrada (< 15 min) -->
+              <div class="score-nums">
+                <span class="snum snum-pred">{{ pred.pred_home_goals }}</span>
+                <span class="score-sep">–</span>
+                <span class="snum snum-pred">{{ pred.pred_away_goals }}</span>
+              </div>
+              <div style="font-size:0.58rem;color:var(--red);font-weight:700;margin-top:2px">🔒</div>
+            {% elif match.status == 'pendiente' %}
+              <div class="score-nums">
+                <span class="snum snum-empty" style="font-size:0.65rem;color:var(--text2)">?</span>
+                <span class="score-sep">–</span>
+                <span class="snum snum-empty" style="font-size:0.65rem;color:var(--text2)">?</span>
+              </div>
+              {% if not open %}<div style="font-size:0.58rem;color:var(--red);font-weight:700;margin-top:2px">🔒</div>{% endif %}
+            {% else %}
+              <div class="score-nums">
+                <span class="snum snum-empty" style="font-size:0.65rem;color:var(--text2)">?</span>
+                <span class="score-sep">–</span>
+                <span class="snum snum-empty" style="font-size:0.65rem;color:var(--text2)">?</span>
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Visitante -->
+          <div class="team-block">
+            <div class="flag-circle">
+              <img src="{{ flag_url(match.away_team) }}" alt="{{ match.away_team }}"
+                   onerror="this.style.display='none'">
+            </div>
+            <span class="team-code">{{ match.away_team | team_code }}</span>
+            <span class="team-name">{{ match.away_team }}</span>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="match-footer">
+          {% if match.status == 'en_curso' %}
+            <span class="sbadge sb-live">🔴 En vivo</span>
+          {% elif match.status == 'finalizado' %}
+            <span class="sbadge sb-done">Finalizado</span>
+          {% endif %}
+
+          {% if pred and match.status == 'finalizado' and pred.points is not none %}
+            {% if pred.points == 5 %}
+              <span class="sbadge sb-exact" data-celebrate>⭐ Exacto +5</span>
+            {% elif pred.points == 3 %}
+              <span class="sbadge sb-winner">✓ Ganador +3</span>
+            {% else %}
+              <span class="sbadge sb-miss">✗ Sin puntos</span>
+            {% endif %}
+          {% elif pred and match.status == 'pendiente' %}
+            <span class="sbadge sb-saved" id="badge-{{ match.id }}">Guardada</span>
+          {% elif match.status == 'pendiente' and current_user and not pred %}
+            <span class="sbadge sb-pending" id="badge-{{ match.id }}">Sin predicción</span>
+          {% endif %}
+
+          {% if match.status == 'pendiente' %}
+            <a href="/matches/{{ match.id }}"
+               style="margin-left:auto;font-size:0.68rem;color:var(--text2);text-decoration:none;font-weight:600">
+              Ver →
+            </a>
+          {% endif %}
+        </div>
+
+      {% if match.status != 'pendiente' %}
+      </a>
+      {% else %}
+      </div>
+      {% endif %}
+
+    {% endfor %}
+  {% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-pred]').forEach(container => {
+    const matchId = container.dataset.pred;
+    const homeInput = container.querySelector('.home-goals');
+    const awayInput = container.querySelector('.away-goals');
+    const statusEl = document.getElementById('status-' + matchId);
+    const badgeEl = document.getElementById('badge-' + matchId);
+    let timer = null;
+
+    function getWinner() {
+      const h = parseInt(homeInput.value) || 0;
+      const a = parseInt(awayInput.value) || 0;
+      return h > a ? 'home' : a > h ? 'away' : 'draw';
+    }
+
+    function save() {
+      const home = parseInt(homeInput.value) || 0;
+      const away = parseInt(awayInput.value) || 0;
+      if (statusEl) { statusEl.textContent = '...'; statusEl.style.color = 'var(--text2)'; }
+
+      const fd = new FormData();
+      fd.append('home_goals', home);
+      fd.append('away_goals', away);
+      fd.append('predicted_winner', getWinner());
+
+      fetch('/predictions/' + matchId, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'fetch' },
+        body: fd,
+      })
+      .then(r => r.json())
+      .then(json => {
+        if (json.ok) {
+          if (statusEl) { statusEl.textContent = '✓ Guardada'; statusEl.style.color = 'var(--accent)'; }
+          if (badgeEl) { badgeEl.className = 'sbadge sb-saved'; badgeEl.textContent = 'Guardada'; }
+        } else {
+          if (statusEl) { statusEl.textContent = json.error || 'Error'; statusEl.style.color = 'var(--red)'; }
+        }
+      })
+      .catch(() => {
+        if (statusEl) { statusEl.textContent = 'Error'; statusEl.style.color = 'var(--red)'; }
+      });
+    }
+
+    homeInput.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(save, 1200); });
+    awayInput.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(save, 1200); });
+    homeInput.addEventListener('blur', () => { clearTimeout(timer); save(); });
+    awayInput.addEventListener('blur', () => { clearTimeout(timer); save(); });
+  });
+});
+</script>
+{% endblock %}

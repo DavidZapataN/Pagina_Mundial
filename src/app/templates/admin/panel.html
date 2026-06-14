@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Admin — Polla del Mundial{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Admin</h1>
+</div>
+
+<!-- Crear partido -->
+<div class="card">
+  <div class="card-title">Crear partido</div>
+  <form action="/matches" method="post">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.9rem">
+      <div class="form-field" style="margin:0">
+        <label class="form-label">Equipo local</label>
+        <input type="text" name="home_team" placeholder="Ej: Colombia" required>
+      </div>
+      <div class="form-field" style="margin:0">
+        <label class="form-label">Equipo visitante</label>
+        <input type="text" name="away_team" placeholder="Ej: Brasil" required>
+      </div>
+      <div class="form-field" style="margin:0">
+        <label class="form-label">Fecha y hora (UTC)</label>
+        <input type="datetime-local" name="kickoff_time" required>
+      </div>
+      <div class="form-field" style="margin:0">
+        <label class="form-label">Fase</label>
+        <select name="phase" required>
+          <option value="grupos">Fase de grupos</option>
+          <option value="dieciseisavos">Dieciseisavos (32)</option>
+          <option value="octavos">Octavos (16)</option>
+          <option value="cuartos">Cuartos de final</option>
+          <option value="semifinal">Semifinal</option>
+          <option value="final">Final</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary" style="margin-top:1rem">Crear partido</button>
+  </form>
+</div>
+
+<!-- Registrar resultados -->
+{% set pending_matches = matches | selectattr('status', '!=', 'finalizado') | list %}
+{% if pending_matches %}
+<div class="card">
+  <div class="card-title">Registrar resultado</div>
+  <div style="display:flex;flex-direction:column;gap:0.75rem">
+    {% for match in pending_matches %}
+    <div style="background:var(--card2);border-radius:10px;padding:0.85rem 1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;flex-wrap:wrap;gap:0.5rem">
+        <div>
+          <span style="font-weight:700;font-size:0.9rem">
+            {{ match.home_team | flag }} {{ match.home_team }}
+            &nbsp;vs&nbsp;
+            {{ match.away_team | flag }} {{ match.away_team }}
+          </span>
+          <div style="font-size:0.7rem;color:var(--text2);margin-top:0.2rem">
+            {{ match.kickoff_time | cot_time }} COT · {{ match.kickoff_time.strftime('%d/%m %H:%M') }} UTC
+          </div>
+        </div>
+        {% if match.status == 'en_curso' %}
+          <span class="sbadge sb-live">En vivo</span>
+        {% else %}
+          <span class="sbadge sb-pending">Próximo</span>
+        {% endif %}
+      </div>
+
+      <form action="/matches/{{ match.id }}/result" method="post"
+            style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <input type="number" name="home_goals" min="0" max="20" value="0" required
+                 style="width:60px;text-align:center;font-size:1.1rem;font-weight:700;padding:0.4rem">
+          <span style="color:var(--text2);font-weight:300">–</span>
+          <input type="number" name="away_goals" min="0" max="20" value="0" required
+                 style="width:60px;text-align:center;font-size:1.1rem;font-weight:700;padding:0.4rem">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Registrar</button>
+
+        <!-- Cambiar a en_curso -->
+        {% if match.status == 'pendiente' %}
+        <form action="/matches/{{ match.id }}/status" method="post" style="display:inline">
+          <input type="hidden" name="new_status" value="en_curso">
+          <button type="submit" class="btn btn-outline btn-sm">▶ En curso</button>
+        </form>
+        {% endif %}
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Partidos finalizados -->
+{% set finished_matches = matches | selectattr('status', '==', 'finalizado') | list %}
+{% if finished_matches %}
+<div class="card">
+  <div class="card-title">Finalizados ({{ finished_matches | length }})</div>
+  <div style="display:flex;flex-direction:column;gap:0.5rem">
+    {% for match in finished_matches %}
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:0.6rem 0.75rem;background:var(--card2);border-radius:8px;flex-wrap:wrap;gap:0.5rem">
+      <span style="font-size:0.88rem;font-weight:600">
+        {{ match.home_team | flag }} {{ match.home_team }}
+        <span style="color:var(--yellow);font-weight:900;margin:0 0.4rem">{{ match.official_home_goals }} – {{ match.official_away_goals }}</span>
+        {{ match.away_team }} {{ match.away_team | flag }}
+      </span>
+      <span style="font-size:0.7rem;color:var(--text2)">{{ match.kickoff_time.strftime('%d/%m') }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if not matches %}
+<div class="empty-state">
+  <div class="empty-icon">📋</div>
+  <p class="empty-text">No hay partidos. Crea el primero arriba.</p>
+</div>
+{% endif %}
+{% endblock %}

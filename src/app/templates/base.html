@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Polla del Mundial{% endblock %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d1b2e;
+      --card:    #162040;
+      --card2:   #1e2d52;
+      --accent:  #00D9B5;
+      --yellow:  #FCD116;
+      --blue:    #003087;
+      --red:     #CE1126;
+      --text:    #ffffff;
+      --text2:   rgba(255,255,255,0.5);
+      --border:  rgba(255,255,255,0.1);
+      --radius:  14px;
+      --font:    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 70px;
+    }
+
+    /* ── Scroll progress bar ── */
+    #scroll-bar {
+      position: fixed;
+      top: 0; left: 0;
+      width: 0%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--yellow));
+      z-index: 999;
+      border-radius: 0 2px 2px 0;
+      transition: width 0.08s linear;
+      pointer-events: none;
+    }
+
+    /* ── Header ── */
+    .app-header {
+      background: rgba(13,27,46,0.92);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .app-brand {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--yellow);
+      text-decoration: none;
+      letter-spacing: -0.01em;
+    }
+    .app-brand span { color: var(--text); }
+    .desktop-nav {
+      display: none;
+      gap: 0.25rem;
+      align-items: center;
+    }
+    .desktop-nav a {
+      color: var(--text2);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.4rem 0.75rem;
+      border-radius: 8px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .desktop-nav a:hover { color: var(--text); background: var(--card); }
+    .desktop-nav a.nav-active { color: var(--accent); }
+    .nav-user-chip {
+      font-size: 0.8rem;
+      color: var(--text2);
+      background: var(--card);
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+    }
+
+    /* ── Bottom Nav (mobile) ── */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 64px;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 200;
+    }
+    .bn-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      text-decoration: none;
+      color: var(--text2);
+      font-size: 0.58rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      transition: color 0.2s;
+    }
+    .bn-item.active { color: var(--accent); }
+    .bn-icon { font-size: 1.2rem; line-height: 1; }
+
+    /* ── Main ── */
+    main { max-width: 600px; margin: 0 auto; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.2rem;
+      margin: 0.75rem 1rem;
+    }
+    .card-title { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; }
+
+    /* ── Filter tabs ── */
+    .filter-row {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem 0.4rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .ftab {
+      padding: 0.38rem 1rem;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--text2);
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .ftab.active { background: var(--accent); border-color: var(--accent); color: #000; }
+    .ftab:hover:not(.active) { border-color: var(--text2); color: var(--text); }
+
+    /* ── Match card ── */
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .match-card, .match-card-div {
+      color: var(--text);
+      background: var(--card);
+      border-radius: var(--radius);
+      margin: 0.5rem 1rem;
+      padding: 0.9rem 1rem;
+      animation: cardIn 0.35s ease both;
+    }
+    .match-card {
+      display: block;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    }
+    .match-card:hover {
+      background: var(--card2);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    }
+    .match-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.65rem;
+    }
+    .group-tag {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .match-time { font-size: 0.7rem; color: var(--text2); text-align: right; }
+    .match-teams {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .team-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2rem;
+    }
+
+    /* ── Flag circle ── */
+    .flag-circle {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+      border: 2px solid rgba(255,255,255,0.15);
+      overflow: hidden;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .flag-circle img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .flag-circle-sm { width: 36px; height: 36px; }
+    .team-code {
+      font-size: 0.6rem;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+    .team-name {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-align: center;
+      word-break: break-word;
+      hyphens: auto;
+      max-width: 72px;
+      color: var(--text2);
+    }
+    .score-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .score-nums {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .snum {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+    .snum-official { background: var(--card2); border: 2px solid var(--border); }
+    .snum-pred { background: rgba(0,217,181,0.15); border: 2px solid var(--accent); color: var(--accent); }
+    .snum-empty { background: transparent; border: 2px solid var(--border); color: var(--text2); }
+    .score-sep { font-size: 1rem; color: var(--text2); font-weight: 300; }
+    .match-footer {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.7rem;
+      flex-wrap: wrap;
+    }
+
+    /* ── Prediction score inputs (OVERRIDE de input[type=number] genérico) ── */
+    input.pred-score-input {
+      width: 34px !important;
+      height: 34px !important;
+      text-align: center;
+      font-size: 0.95rem !important;
+      font-weight: 800;
+      border-radius: 8px !important;
+      border: 2px solid var(--accent) !important;
+      background: rgba(0,217,181,0.15) !important;
+      color: var(--accent) !important;
+      padding: 0 !important;
+      -moz-appearance: textfield;
+      transition: border-color 0.2s, transform 0.1s;
+      cursor: text;
+    }
+    input.pred-score-input::-webkit-inner-spin-button,
+    input.pred-score-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input.pred-score-input:focus {
+      outline: none !important;
+      border-color: var(--yellow) !important;
+      transform: scale(1.08);
+    }
+
+    @keyframes savePulse {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.12); }
+      100% { transform: scale(1); }
+    }
+    .save-pulse { animation: savePulse 0.35s ease; }
+
+    /* ── Status badges ── */
+    .sbadge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      padding: 0.22rem 0.65rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+    .sb-live { background: var(--red); color: #fff; animation: pulse 1s infinite; }
+    .sb-done { background: rgba(255,255,255,0.12); color: var(--text2); }
+    .sb-saved { border: 1.5px solid var(--accent); color: var(--accent); }
+    .sb-pending { border: 1.5px solid var(--border); color: var(--text2); }
+    .sb-exact { background: var(--yellow); color: #000; }
+    .sb-winner { background: var(--blue); color: #fff; }
+    .sb-miss { background: var(--red); color: #fff; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+
+    /* ── Date header ── */
+    .date-header {
+      padding: 1rem 1rem 0.25rem;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      color: var(--text2);
+      text-transform: uppercase;
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      padding: 1rem 1rem 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .page-title { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.01em; }
+    .page-count { font-size: 0.78rem; color: var(--text2); }
+
+    /* ── Leaderboard ── */
+    .lb-list { padding: 0 1rem; }
+    .lb-row {
+      display: flex;
+      align-items: center;
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      margin-bottom: 0.4rem;
+      gap: 0.75rem;
+      background: var(--card);
+      transition: background 0.15s;
+      animation: cardIn 0.35s ease both;
+    }
+    .lb-row.me { background: rgba(0,217,181,0.1); border: 1px solid rgba(0,217,181,0.25); }
+    .lb-pos { width: 30px; text-align: center; font-size: 1rem; font-weight: 800; }
+    .lb-name { flex: 1; font-size: 0.95rem; font-weight: 700; }
+    .lb-sub { font-size: 0.7rem; color: var(--text2); font-weight: 400; }
+    .lb-pts { font-size: 1.3rem; font-weight: 900; color: var(--yellow); min-width: 48px; text-align: right; }
+    .lb-pts-label { font-size: 0.6rem; color: var(--text2); text-align: right; font-weight: 400; }
+
+    /* ── Forms ── */
+    .form-field { margin-bottom: 1rem; }
+    .form-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text2);
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input[type=text], input[type=password], input[type=number],
+    input[type=datetime-local], select, textarea {
+      width: 100%;
+      background: var(--card2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 0.7rem 0.9rem;
+      font-size: 0.95rem;
+      font-family: var(--font);
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    select option { background: var(--card2); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.65rem 1.5rem;
+      border-radius: 10px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 700;
+      font-family: var(--font);
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+    }
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-blue { background: var(--blue); color: #fff; }
+    .btn-danger { background: var(--red); color: #fff; }
+    .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+    .btn-full { width: 100%; }
+    .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.8rem; }
+
+    /* ── Alert ── */
+    .alert { padding: 0.8rem 1rem; border-radius: 10px; font-size: 0.9rem; margin-bottom: 1rem; }
+    .alert-error { background: rgba(206,17,38,0.15); border: 1px solid var(--red); color: #ff6b7a; }
+    .alert-ok { background: rgba(0,217,181,0.12); border: 1px solid var(--accent); color: var(--accent); }
+
+    /* ── Detail prediction form ── */
+    .score-input {
+      width: 64px; height: 64px;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 800;
+      padding: 0;
+    }
+    .score-dash { font-size: 1.5rem; color: var(--text2); }
+
+    /* ── Empty state ── */
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text2); }
+    .empty-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+    .empty-text { font-size: 0.95rem; margin-bottom: 1.25rem; }
+
+    /* ── Group card ── */
+    .group-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+      margin: 0.5rem 1rem;
+      text-decoration: none;
+      color: var(--text);
+      display: block;
+      transition: background 0.2s, transform 0.15s;
+      animation: cardIn 0.35s ease both;
+    }
+    .group-card:hover { background: var(--card2); transform: translateY(-1px); }
+    .group-code {
+      display: inline-block;
+      font-family: monospace;
+      font-size: 1.2rem;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      background: var(--card2);
+      border: 2px dashed var(--accent);
+      color: var(--accent);
+      padding: 0.4rem 1rem;
+      border-radius: 10px;
+    }
+
+    /* ── Bracket ── */
+    .bracket-phase-title {
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--yellow);
+      padding: 1.2rem 1rem 0.4rem;
+    }
+    .bracket-match {
+      background: var(--card);
+      border-radius: 10px;
+      margin: 0.4rem 1rem;
+      padding: 0.7rem 1rem;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 0.5rem;
+      animation: cardIn 0.35s ease both;
+    }
+    .bracket-team {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .bracket-team.away { flex-direction: row-reverse; }
+    .bracket-team img { width: 22px; height: 16px; object-fit: cover; border-radius: 2px; flex-shrink: 0; }
+    .bracket-score {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      justify-content: center;
+    }
+    .bsnum {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; font-weight: 800;
+    }
+
+    /* ── Group standings table ── */
+    .group-standings {
+      background: var(--card);
+      border-radius: 10px;
+      margin: 0.4rem 1rem;
+      overflow: hidden;
+      animation: cardIn 0.35s ease both;
+    }
+    .gs-header {
+      display: grid;
+      grid-template-columns: 1fr 22px 22px 22px 22px 22px 32px;
+      gap: 0.2rem;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.6rem;
+      font-weight: 800;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+    .gs-header .gs-name { text-align: left; }
+    .gs-row {
+      display: grid;
+      grid-template-columns: 1fr 22px 22px 22px 22px 22px 32px;
+      gap: 0.2rem;
+      padding: 0.5rem 0.8rem;
+      font-size: 0.8rem;
+      align-items: center;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .gs-row:last-child { border-bottom: none; }
+    .gs-row.qualified { background: rgba(0,217,181,0.07); }
+    .gs-name-cell { display: flex; align-items: center; gap: 0.4rem; text-align: left; font-weight: 700; }
+    .gs-pts { font-weight: 900; color: var(--yellow); }
+
+    /* ── Visual Bracket ── */
+    .bv-box {
+      width: var(--bv-w, 140px);
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      flex-shrink: 0;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .bv-box:hover { border-color: rgba(255,255,255,0.3); box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+    .bv-team {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      height: 36px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .bv-team + .bv-team { border-top: 1px solid var(--border); }
+    .bv-winner { background: rgba(0,217,181,0.18); color: var(--accent); }
+    .bv-tbd { color: var(--text2); font-size: 0.68rem; font-style: italic; }
+    .bv-flag { width: 22px; height: 16px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+    .bv-sc { margin-left: auto; color: var(--yellow); font-weight: 900; font-size: 0.9rem; }
+    .bv-final-box {
+      width: calc(var(--bv-w, 140px) + 20px) !important;
+      border: 2px solid rgba(252,209,22,0.55) !important;
+      box-shadow: 0 0 24px rgba(252,209,22,0.15);
+    }
+    .bv-final-box .bv-team { height: 40px; font-size: 0.85rem; }
+    .bv-col-lbl {
+      font-size: 0.6rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text2);
+      text-align: center;
+      width: var(--bv-w, 140px);
+      flex-shrink: 0;
+    }
+    .bv-col-lbl.final { color: var(--yellow); width: calc(var(--bv-w, 140px) + 20px); }
+
+    /* ── Mis Tablas ── */
+    .mt-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin: 0 1rem 1.25rem;
+      animation: cardIn 0.35s ease both;
+    }
+    .mt-group-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      background: linear-gradient(135deg, rgba(0,48,135,0.45) 0%, var(--card2) 100%);
+      border-bottom: 1px solid var(--border);
+    }
+    .mt-group-name { font-size: 1rem; font-weight: 800; }
+    .mt-group-meta { font-size: 0.7rem; color: var(--text2); margin-top: 0.2rem; }
+    .mt-my-pos { font-size: 0.65rem; color: var(--accent); font-weight: 700; margin-top: 0.35rem; }
+    .mt-you-badge {
+      display: inline-block;
+      font-size: 0.55rem;
+      font-weight: 800;
+      color: var(--bg);
+      background: var(--accent);
+      border-radius: 3px;
+      padding: 0.1rem 0.3rem;
+      margin-left: 0.35rem;
+      vertical-align: middle;
+      letter-spacing: 0.04em;
+    }
+    .mt-card .lb-row {
+      border-radius: 0;
+      border: none;
+      border-left: 3px solid transparent;
+      border-bottom: 1px solid var(--border);
+      padding-left: calc(1rem - 3px);
+      animation: none;
+    }
+    .mt-card .lb-row:last-child { border-bottom: none; }
+    .mt-card .lb-row.me {
+      background: rgba(0,217,181,0.08);
+      border-left-color: var(--accent);
+    }
+
+    /* ── Celebration ── */
+    @keyframes celebrate {
+      0%   { transform: scale(1)   rotate(0deg); }
+      25%  { transform: scale(1.3) rotate(-5deg); }
+      75%  { transform: scale(1.1) rotate(3deg); }
+      100% { transform: scale(1)   rotate(0deg); }
+    }
+    .celebrate { animation: celebrate 0.6s ease-in-out; }
+
+    /* ── Responsive: desktop ── */
+    @media (min-width: 640px) {
+      body { padding-bottom: 0; }
+      .bottom-nav { display: none; }
+      .desktop-nav { display: flex; }
+      main { max-width: 720px; }
+      .match-card, .match-card-div, .bracket-match, .group-standings { margin-left: 0; margin-right: 0; }
+      .date-header, .bracket-phase-title { padding-left: 0; padding-right: 0; }
+      .card { margin: 0.75rem 0; }
+      .filter-row { padding: 0.75rem 0 0.4rem; }
+      .page-header { padding: 1rem 0 0.25rem; }
+      .lb-list { padding: 0; }
+      main { padding: 0 1.5rem; }
+      .group-card { margin: 0.5rem 0; }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div id="scroll-bar"></div>
+
+  <header class="app-header">
+    <a href="/matches" class="app-brand">⚽ <span>Polla del</span> Mundial</a>
+    <nav class="desktop-nav">
+      <a href="/matches" {% if request.url.path.startswith('/matches') or request.url.path == '/' %}class="nav-active"{% endif %}>Partidos</a>
+      <a href="/bracket" {% if request.url.path.startswith('/bracket') %}class="nav-active"{% endif %}>Llaves</a>
+      {% if current_user %}
+        <a href="/predictions/me" {% if request.url.path.startswith('/predictions') %}class="nav-active"{% endif %}>Mis picks</a>
+        <a href="/groups/mis-tablas" {% if request.url.path.startswith('/groups') or request.url.path.startswith('/leaderboard') %}class="nav-active"{% endif %}>Tablas</a>
+        {% if current_user.is_admin %}
+          <a href="/admin" {% if request.url.path.startswith('/admin') %}class="nav-active"{% endif %}>Admin</a>
+        {% endif %}
+        <span class="nav-user-chip">{{ current_user.username }}</span>
+        <form action="/auth/logout" method="post" style="display:inline">
+          <button type="submit" class="btn btn-outline btn-sm">Salir</button>
+        </form>
+      {% else %}
+        <a href="/leaderboard" {% if request.url.path.startswith('/leaderboard') %}class="nav-active"{% endif %}>Tabla</a>
+        <a href="/auth/login">Entrar</a>
+        <a href="/auth/register" class="btn btn-primary btn-sm">Registrarse</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <nav class="bottom-nav">
+    <a href="/matches" class="bn-item {% if request.url.path.startswith('/matches') or request.url.path == '/' %}active{% endif %}">
+      <span class="bn-icon">⚽</span>
+      <span>Partidos</span>
+    </a>
+    <a href="/bracket" class="bn-item {% if request.url.path.startswith('/bracket') %}active{% endif %}">
+      <span class="bn-icon">🗓</span>
+      <span>Llaves</span>
+    </a>
+    {% if current_user %}
+    <a href="/predictions/me" class="bn-item {% if request.url.path.startswith('/predictions') %}active{% endif %}">
+      <span class="bn-icon">📋</span>
+      <span>Mis picks</span>
+    </a>
+    <a href="/groups/mis-tablas" class="bn-item {% if request.url.path.startswith('/groups') or request.url.path.startswith('/leaderboard') %}active{% endif %}">
+      <span class="bn-icon">🏆</span>
+      <span>Tablas</span>
+    </a>
+    {% if current_user.is_admin %}
+    <a href="/admin" class="bn-item {% if request.url.path.startswith('/admin') %}active{% endif %}">
+      <span class="bn-icon">⚙️</span>
+      <span>Admin</span>
+    </a>
+    {% endif %}
+    {% else %}
+    <a href="/leaderboard" class="bn-item {% if request.url.path.startswith('/leaderboard') %}active{% endif %}">
+      <span class="bn-icon">🏆</span>
+      <span>Tabla</span>
+    </a>
+    <a href="/auth/login" class="bn-item">
+      <span class="bn-icon">👤</span>
+      <span>Entrar</span>
+    </a>
+    <a href="/auth/register" class="bn-item">
+      <span class="bn-icon">✏️</span>
+      <span>Registro</span>
+    </a>
+    {% endif %}
+  </nav>
+
+  <script>
+    // Scroll progress bar
+    const bar = document.getElementById('scroll-bar');
+    window.addEventListener('scroll', () => {
+      const h = document.documentElement.scrollHeight - window.innerHeight;
+      bar.style.width = (h > 0 ? (window.scrollY / h) * 100 : 100) + '%';
+    }, { passive: true });
+
+    // Stagger animation for repeated cards
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.match-card, .match-card-div, .lb-row, .group-card, .bracket-match, .group-standings, .mt-card').forEach((el, i) => {
+        el.style.animationDelay = Math.min(i * 0.04, 0.4) + 's';
+      });
+
+      // Celebrate animation
+      document.querySelectorAll('[data-celebrate]').forEach(el => {
+        el.classList.add('celebrate');
+        el.addEventListener('animationend', () => el.classList.remove('celebrate'));
+      });
+    });
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

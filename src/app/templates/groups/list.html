@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Mis grupos — Mundial 2026{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Grupos</h1>
+  {% if groups %}
+    <span class="page-count">{{ groups | length }}</span>
+  {% endif %}
+</div>
+
+{% if error %}
+<div class="card">
+  <div class="alert alert-error">{{ error }}</div>
+</div>
+{% endif %}
+
+<!-- Mis grupos -->
+{% if not groups %}
+  <div class="empty-state">
+    <div class="empty-icon">👥</div>
+    <p class="empty-text">No perteneces a ningún grupo todavía.<br>¡Crea uno o únete con un código!</p>
+  </div>
+{% else %}
+  {% for info in groups %}
+    <a href="/groups/{{ info.group.id }}" class="group-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+        <div>
+          <div style="font-size:1rem;font-weight:800">{{ info.group.name }}</div>
+          <div style="font-size:0.72rem;color:var(--text2);margin-top:0.15rem">
+            {{ info.member_count }} {% if info.member_count == 1 %}participante{% else %}participantes{% endif %}
+            {% if info.is_creator %} · <span style="color:var(--accent)">Creado por ti</span>{% endif %}
+            {% if info.group.start_phase %} · Desde {{ info.group.start_phase.value | title }}{% endif %}
+          </div>
+        </div>
+        <span style="font-size:0.7rem;color:var(--text2);font-weight:600">Ver tabla →</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.6rem;margin-top:0.5rem">
+        <span style="font-size:0.7rem;color:var(--text2);font-weight:600">Código:</span>
+        <span class="group-code" style="font-size:0.95rem;padding:0.25rem 0.7rem">{{ info.group.join_code }}</span>
+      </div>
+    </a>
+  {% endfor %}
+{% endif %}
+
+<!-- Crear grupo -->
+<div class="card" style="margin-top:1.5rem">
+  <div class="card-title">Crear grupo</div>
+  <p style="font-size:0.82rem;color:var(--text2);margin-bottom:1rem">
+    Crea un grupo privado para tu familia o amigos. Puedes elegir desde qué fase del torneo cuentan los puntos.
+  </p>
+  <form action="/groups/create" method="post">
+    <div class="form-field">
+      <label class="form-label" for="create-name">Nombre del grupo</label>
+      <input type="text" id="create-name" name="name" maxlength="60"
+             placeholder="Ej: Familia García, Amigos del trabajo…" required>
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="create-phase">Contar puntos desde</label>
+      <select id="create-phase" name="start_phase">
+        <option value="">Toda la polla (fase de grupos en adelante)</option>
+        {% for p in phases %}
+          <option value="{{ p.value }}">{{ p.value | title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary btn-full">Crear grupo</button>
+  </form>
+</div>
+
+<!-- Unirse a grupo -->
+<div class="card">
+  <div class="card-title">Unirse con código</div>
+  <p style="font-size:0.82rem;color:var(--text2);margin-bottom:1rem">
+    Ingresa el código que te compartieron para unirte al grupo.
+  </p>
+  <form action="/groups/join" method="post">
+    <div class="form-field">
+      <label class="form-label" for="join-code">Código de grupo</label>
+      <input type="text" id="join-code" name="join_code" maxlength="8"
+             placeholder="Ej: AB12CD"
+             style="text-transform:uppercase;letter-spacing:0.1em;font-family:monospace;font-size:1.1rem"
+             required>
+    </div>
+    <button type="submit" class="btn btn-outline btn-full">Unirse</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const joinInput = document.getElementById('join-code');
+if (joinInput) {
+  joinInput.addEventListener('input', () => {
+    const pos = joinInput.selectionStart;
+    joinInput.value = joinInput.value.toUpperCase();
+    joinInput.setSelectionRange(pos, pos);
+  });
+}
+</script>
+{% endblock %}
