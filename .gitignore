@@ -46,3 +46,6 @@ desktop.ini
 # Logs
 *.log
 logs/
+
+# IDE / herramientas locales
+.kiro/
