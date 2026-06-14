@@ -103,9 +103,6 @@ class MatchService:
         )
         return match
 
-    # Ventana en la que un partido sin resultado se considera "en vivo".
-    LIVE_WINDOW = LIVE_WINDOW
-
     def auto_transition_statuses(self, now: datetime | None = None) -> int:
         """
         Transición automática pendiente → en_curso para partidos cuyo
@@ -121,7 +118,7 @@ class MatchService:
             select(Match).where(
                 Match.status == MatchStatus.pendiente,
                 Match.kickoff_time <= now,
-                Match.kickoff_time >= now - self.LIVE_WINDOW,
+                Match.kickoff_time >= now - LIVE_WINDOW,
             )
         ).all()
         changed = 0

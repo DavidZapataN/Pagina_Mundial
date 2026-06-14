@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
 import app.models  # noqa: F401  (registra las tablas)
@@ -77,8 +78,5 @@ def test_guardar_y_repuntuar():
 def test_no_se_puede_guardar_cerrado():
     s = _session()
     _add_match(s, utcnow() - timedelta(hours=1))
-    try:
+    with pytest.raises(BonusClosedError):
         BonusService(s).save_user_bonus(1, "Brasil", "Neymar")
-        assert False, "debió lanzar BonusClosedError"
-    except BonusClosedError:
-        pass
