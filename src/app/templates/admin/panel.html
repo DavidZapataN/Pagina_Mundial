@@ -114,6 +114,16 @@
           <input type="number" name="away_goals" min="0" max="20" value="0" required
                  style="width:60px;text-align:center;font-size:1.1rem;font-weight:700;padding:0.4rem">
         </div>
+        {% if match.phase != 'grupos' %}
+        <div style="display:flex;align-items:center;gap:0.4rem">
+          <span style="font-size:0.7rem;color:var(--text2)">Avanza (si hay penales):</span>
+          <select name="advanced" style="padding:0.35rem;font-size:0.8rem">
+            <option value="">—</option>
+            <option value="home">🏠 {{ match.home_team | team_code }}</option>
+            <option value="away">✈️ {{ match.away_team | team_code }}</option>
+          </select>
+        </div>
+        {% endif %}
         <button type="submit" class="btn btn-primary btn-sm">Registrar</button>
 
         <!-- Cambiar a en_curso -->

@@ -1,9 +1,11 @@
 """
 Unit tests para la puntuación de eliminatorias definidas por penales.
 
-Cuando un partido termina empatado en el marcador pero se define por penales,
-el acierto de "ganador" (3 pts) debe basarse en quién avanzó, no en el empate
-implícito del marcador.
+Modelo "híbrido": cuando un partido de eliminatoria termina empatado en los
+120' y se define por penales, se da el acierto de resultado (+3) tanto a quien
+predijo el empate (el resultado real del marcador) como a quien predijo al
+equipo que avanzó. Solo queda en 0 quien apostó por el equipo eliminado.
+El marcador exacto sigue dando 5.
 """
 
 from __future__ import annotations
@@ -26,9 +28,16 @@ def test_ganador_por_penales_da_3_aunque_el_marcador_sea_empate():
     assert pts == 3
 
 
-def test_predijo_empate_pero_avanzo_un_equipo_no_da_ganador():
-    # Predijo empate puro (0-0); terminó 1-1 (no exacto) y avanzó el visitante.
+def test_predijo_empate_y_hubo_empate_da_3_aunque_se_definiera_por_penales():
+    # Predijo empate (0-0, no exacto); terminó 1-1 y avanzó el visitante por
+    # penales. El resultado de los 120' fue empate → acierta el resultado → 3.
     pts = score("draw", 0, 0, 1, 1, official_winner=PredictedWinner.away.value)
+    assert pts == 3
+
+
+def test_predijo_al_equipo_eliminado_no_da_nada():
+    # Terminó 1-1, avanzó el local por penales; predijo que ganaba el visitante.
+    pts = score("away", 2, 1, 1, 1, official_winner=PredictedWinner.home.value)
     assert pts == 0
 
 

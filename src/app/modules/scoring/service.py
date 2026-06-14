@@ -70,17 +70,26 @@ class ScoringService:
 
         Es una función pura — no accede a la base de datos.
 
-        ``official_winner`` permite indicar quién avanzó realmente cuando un
-        partido de eliminatoria terminó empatado y se definió por penales.
-        Si es ``None`` se deriva del marcador (caso fase de grupos).
+        Regla de eliminatorias definidas por penales (modelo "híbrido"): el
+        marcador guardado es el de los 120' (un empate), y ``official_winner``
+        indica quién avanzó por penales. Para no perjudicar a nadie, se da el
+        acierto de resultado (+3) tanto a quien predijo el resultado del
+        marcador (el empate) como a quien predijo al equipo que avanzó. Solo
+        queda en 0 quien apostó por el equipo eliminado.
+
+        En fase de grupos ``official_winner`` es ``None`` y todo se deriva del
+        marcador, sin cambios de comportamiento.
 
         Requirements: 4.2, 4.3, 4.4
         """
         if pred_home == official_home and pred_away == official_away:
             return 5
 
-        winner = official_winner or _official_winner(official_home, official_away)
-        if predicted_winner == winner:
+        # Acierto del resultado según el marcador (p. ej. empate en 120').
+        if predicted_winner == _official_winner(official_home, official_away):
+            return 3
+        # Acierto de quién avanzó por penales (solo eliminatorias).
+        if official_winner and predicted_winner == official_winner:
             return 3
 
         return 0

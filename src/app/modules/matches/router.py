@@ -28,7 +28,7 @@ from app.exceptions import (
     MatchNotFoundError,
     UnauthenticatedError,
 )
-from app.models import Match, MatchStatus, TournamentPhase, User
+from app.models import Match, MatchStatus, PredictedWinner, TournamentPhase, User
 from app.modules.auth.dependencies import get_current_user_or_none, require_current_user
 from app.modules.matches.service import MatchService
 
@@ -259,6 +259,7 @@ async def register_result(
     match_id: int,
     home_goals: int = Form(...),
     away_goals: int = Form(...),
+    advanced: str = Form(""),
     current_user: User | None = Depends(get_current_user_or_none),
     session: Session = Depends(get_session),
 ) -> Response:
@@ -266,13 +267,24 @@ async def register_result(
     Registra el resultado oficial de un partido (solo administradores).
     Dispara automáticamente el cálculo de puntuaciones.
 
+    ``advanced`` ("home"/"away") indica quién avanzó cuando una eliminatoria
+    quedó empatada y se definió por penales; se ignora si el marcador no es
+    empate. Vacío en fase de grupos.
+
     Requirements: 2.4, 2.5, 4.1, 4.7
     """
     admin = _require_admin(current_user)
 
+    # Solo tiene sentido el "avanzó por penales" si el marcador quedó empatado.
+    official_winner: PredictedWinner | None = None
+    if home_goals == away_goals and advanced in ("home", "away"):
+        official_winner = PredictedWinner(advanced)
+
     svc = MatchService(session)
     try:
-        match, scores = svc.register_result(match_id, home_goals, away_goals)
+        match, scores = svc.register_result(
+            match_id, home_goals, away_goals, official_winner=official_winner
+        )
     except InvalidScoreError:
         return HTMLResponse(
             _error_html(ERROR_MESSAGES["invalid_score"], f"/admin"),
