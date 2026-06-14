@@ -5,8 +5,9 @@ Reglas de puntuación:
   - Campeón acertado  → 15 puntos
   - Goleador acertado → 10 puntos
 
-Los bonus se bloquean cuando arranca el Mundial (primer partido) y se
-puntúan cuando el administrador registra los resultados oficiales.
+Los bonus se bloquean cuando arranca el último partido de la fase de
+grupos, y se puntúan cuando el administrador registra los resultados
+oficiales.
 """
 
 from __future__ import annotations
@@ -47,7 +48,7 @@ def compute_bonus_points(pred: BonusPrediction, official: TournamentBonus) -> in
 
 
 class BonusClosedError(PredictionError):
-    """Los bonus ya están cerrados (el torneo comenzó)."""
+    """Los bonus ya están cerrados (terminó la fase de grupos)."""
 
 
 class BonusService:
@@ -58,19 +59,21 @@ class BonusService:
     # Estado del torneo
     # ------------------------------------------------------------------
 
-    def tournament_start(self) -> datetime | None:
-        """Kickoff del primer partido (None si no hay partidos)."""
-        first = self._session.exec(
-            select(Match).order_by(Match.kickoff_time)
+    def group_stage_end(self) -> datetime | None:
+        """Kickoff del último partido de fase de grupos (None si no hay partidos)."""
+        last = self._session.exec(
+            select(Match)
+            .where(Match.phase == TournamentPhase.grupos)
+            .order_by(Match.kickoff_time.desc())
         ).first()
-        return first.kickoff_time if first else None
+        return last.kickoff_time if last else None
 
     def is_open(self, now: datetime | None = None) -> bool:
-        """Los bonus están abiertos hasta que arranca el primer partido."""
-        start = self.tournament_start()
-        if start is None:
+        """Los bonus están abiertos hasta que arranca el último partido de grupos."""
+        deadline = self.group_stage_end()
+        if deadline is None:
             return True
-        return (now or utcnow()) < start
+        return (now or utcnow()) < deadline
 
     def list_teams(self) -> list[str]:
         """Equipos disponibles (de la fase de grupos), ordenados."""

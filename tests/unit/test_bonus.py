@@ -52,7 +52,7 @@ def _add_match(s, kickoff):
     s.commit()
 
 
-def test_is_open_segun_inicio_del_torneo():
+def test_is_open_segun_fin_de_fase_de_grupos():
     s = _session()
     _add_match(s, utcnow() + timedelta(days=2))
     assert BonusService(s).is_open() is True
