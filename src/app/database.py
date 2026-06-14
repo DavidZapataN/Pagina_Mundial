@@ -37,14 +37,17 @@ logger = logging.getLogger("polla.database")
 # check_same_thread=False is required for SQLite when using FastAPI because
 # the same connection may be accessed from multiple threads (e.g., background
 # tasks).  SQLModel / SQLAlchemy manage thread-safety at the session level.
+# Render provides postgres:// but SQLAlchemy 2.0 requires postgresql://
+_database_url = settings.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 _connect_args = (
     {"check_same_thread": False}
-    if settings.DATABASE_URL.startswith("sqlite")
+    if _database_url.startswith("sqlite")
     else {}
 )
 
 engine = create_engine(
-    settings.DATABASE_URL,
+    _database_url,
     connect_args=_connect_args,
     echo=settings.DEBUG,  # logs SQL statements when DEBUG=True
 )
