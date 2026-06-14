@@ -19,6 +19,7 @@ from sqlmodel import Session, select
 
 from app.exceptions import PredictionError
 from app.models import BonusPrediction, Match, TournamentBonus, TournamentPhase
+from app.utils import utcnow
 
 logger = logging.getLogger("polla.bonus")
 
@@ -69,7 +70,7 @@ class BonusService:
         start = self.tournament_start()
         if start is None:
             return True
-        return (now or datetime.utcnow()) < start
+        return (now or utcnow()) < start
 
     def list_teams(self) -> list[str]:
         """Equipos disponibles (de la fase de grupos), ordenados."""
@@ -100,7 +101,7 @@ class BonusService:
         official = self.get_official()
         official.champion = (champion or "").strip() or None
         official.top_scorer = (top_scorer or "").strip() or None
-        official.updated_at = datetime.utcnow()
+        official.updated_at = utcnow()
         self._session.add(official)
 
         preds = self._session.exec(select(BonusPrediction)).all()
@@ -137,7 +138,7 @@ class BonusService:
             pred = BonusPrediction(user_id=user_id)
         pred.champion = champion
         pred.top_scorer = top_scorer
-        pred.updated_at = datetime.utcnow()
+        pred.updated_at = utcnow()
         self._session.add(pred)
         self._session.commit()
         self._session.refresh(pred)

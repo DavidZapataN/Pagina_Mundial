@@ -4,7 +4,20 @@ Utilidades compartidas: banderas, grupos y zona horaria de Colombia.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+
+
+def utcnow() -> datetime:
+    """
+    UTC actual como datetime *naive* (sin tzinfo).
+
+    Devuelve el mismo valor que el deprecado ``datetime.utcnow()`` pero usando
+    una API no deprecada. Se mantiene naive a propósito: todos los datetimes
+    guardados en la BD (``kickoff_time``, ``expires_at``, ``created_at``…) son
+    naive, así que comparar contra aware lanzaría ``TypeError``.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
 
 _PREDICTION_CUTOFF_MINUTES = 15
 
@@ -193,4 +206,4 @@ def team_code(team: str) -> str:
 
 def is_prediction_open(kickoff_time: datetime) -> bool:
     """True si todavía se puede predecir (más de 15 min antes del partido)."""
-    return datetime.utcnow() < kickoff_time - timedelta(minutes=_PREDICTION_CUTOFF_MINUTES)
+    return utcnow() < kickoff_time - timedelta(minutes=_PREDICTION_CUTOFF_MINUTES)

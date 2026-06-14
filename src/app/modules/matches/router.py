@@ -89,17 +89,16 @@ async def list_matches(
     Requirements: 2.1, 2.2
     """
     from collections import defaultdict
-    from datetime import datetime
 
     from app.models import Prediction
-    from app.utils import cot_date, format_date_header
+    from app.utils import cot_date, format_date_header, utcnow
     from sqlmodel import select as sql_select
 
     svc = MatchService(session)
     svc.auto_transition_statuses()  # refleja "en vivo" sin esperar al loop
     all_matches = svc.list_matches(group_by="date")
 
-    now = datetime.utcnow()
+    now = utcnow()
 
     # Filtro upcoming / past / all
     if filter == "upcoming":

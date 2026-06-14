@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Literal
 
 _CUTOFF_MINUTES = 15
@@ -22,6 +22,7 @@ from sqlmodel import Session, select
 
 from app.exceptions import DrawMismatchError, MatchClosedError, MatchNotFoundError
 from app.models import Match, MatchStatus, Prediction, PredictedWinner, TournamentPhase
+from app.utils import utcnow
 
 logger = logging.getLogger("polla.predictions")
 
@@ -83,7 +84,7 @@ class PredictionService:
             )
 
         cutoff = match.kickoff_time - timedelta(minutes=_CUTOFF_MINUTES)
-        if datetime.utcnow() >= cutoff:
+        if utcnow() >= cutoff:
             raise MatchClosedError(
                 f"Las predicciones cierran {_CUTOFF_MINUTES} minutos antes del partido"
             )
@@ -102,7 +103,7 @@ class PredictionService:
             existing.predicted_winner = predicted_winner
             existing.pred_home_goals = home_goals
             existing.pred_away_goals = away_goals
-            existing.updated_at = datetime.utcnow()
+            existing.updated_at = utcnow()
             self._session.add(existing)
             self._session.commit()
             self._session.refresh(existing)

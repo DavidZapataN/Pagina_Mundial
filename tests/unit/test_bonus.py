@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from sqlmodel import Session, SQLModel, create_engine
 
 import app.models  # noqa: F401  (registra las tablas)
 from app.models import BonusPrediction, Match, TournamentBonus, TournamentPhase, MatchStatus
+from app.utils import utcnow
 from app.modules.bonus.service import (
     CHAMPION_PTS,
     TOPSCORER_PTS,
@@ -52,16 +53,16 @@ def _add_match(s, kickoff):
 
 def test_is_open_segun_inicio_del_torneo():
     s = _session()
-    _add_match(s, datetime.utcnow() + timedelta(days=2))
+    _add_match(s, utcnow() + timedelta(days=2))
     assert BonusService(s).is_open() is True
     s2 = _session()
-    _add_match(s2, datetime.utcnow() - timedelta(hours=1))
+    _add_match(s2, utcnow() - timedelta(hours=1))
     assert BonusService(s2).is_open() is False
 
 
 def test_guardar_y_repuntuar():
     s = _session()
-    _add_match(s, datetime.utcnow() + timedelta(days=2))
+    _add_match(s, utcnow() + timedelta(days=2))
     svc = BonusService(s)
     svc.save_user_bonus(1, "Argentina", "Messi")
     svc.save_user_bonus(2, "Brasil", "Neymar")
@@ -75,7 +76,7 @@ def test_guardar_y_repuntuar():
 
 def test_no_se_puede_guardar_cerrado():
     s = _session()
-    _add_match(s, datetime.utcnow() - timedelta(hours=1))
+    _add_match(s, utcnow() - timedelta(hours=1))
     try:
         BonusService(s).save_user_bonus(1, "Brasil", "Neymar")
         assert False, "debió lanzar BonusClosedError"

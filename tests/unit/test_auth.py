@@ -8,13 +8,14 @@ Requirements: 1.3, 1.5, 1.6
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from sqlmodel import select
 
 from app.exceptions import InvalidCredentialsError
 from app.models import Session as DBSession
+from app.utils import utcnow
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +72,7 @@ def test_expired_session_returns_none(auth_service):
     ).first()
     assert db_session is not None
 
-    db_session.expires_at = datetime.utcnow() - timedelta(hours=1)
+    db_session.expires_at = utcnow() - timedelta(hours=1)
     auth_service._session.add(db_session)
     auth_service._session.commit()
 

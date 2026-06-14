@@ -98,14 +98,14 @@ async def reminders(
     Partidos próximos (dentro de N horas) que el usuario aún no predijo y
     siguen abiertos. Consumido por el JS de recordatorios.
     """
-    from datetime import datetime, timedelta
+    from datetime import timedelta
 
     from sqlmodel import select as sql_select
 
     from app.models import Match, MatchStatus, Prediction
-    from app.utils import is_prediction_open
+    from app.utils import is_prediction_open, utcnow
 
-    now = datetime.utcnow()
+    now = utcnow()
     horizon = now + timedelta(hours=max(1, min(hours, 72)))
 
     predicted_ids = {
