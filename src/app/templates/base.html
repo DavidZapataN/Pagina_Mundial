@@ -812,7 +812,6 @@
           <button type="submit" class="btn btn-outline btn-sm">Salir</button>
         </form>
       {% else %}
-        <a href="/leaderboard" {% if request.url.path.startswith('/leaderboard') %}class="nav-active"{% endif %}>Tabla</a>
         <a href="/auth/login">Entrar</a>
         <a href="/auth/register" class="btn btn-primary btn-sm">Registrarse</a>
       {% endif %}
@@ -852,10 +851,6 @@
     </a>
     {% endif %}
     {% else %}
-    <a href="/leaderboard" class="bn-item {% if request.url.path.startswith('/leaderboard') %}active{% endif %}">
-      <span class="bn-icon">🏆</span>
-      <span>Tabla</span>
-    </a>
     <a href="/auth/login" class="bn-item">
       <span class="bn-icon">👤</span>
       <span>Entrar</span>
