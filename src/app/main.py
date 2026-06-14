@@ -68,6 +68,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 conn.commit()
             except Exception:
                 pass  # column already exists
+    from app.seed import seed_if_empty
+    seed_if_empty()
     logger.info("Application startup complete.")
     yield
     logger.info("Application shutdown.")
